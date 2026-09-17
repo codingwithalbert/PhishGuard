@@ -64,7 +64,38 @@ Run-Check "API test suite" {
     }
 }
 
-# 3. Basic secret-file check
+# 3. Frontend checks
+Run-Check "Frontend lint" {
+    Push-Location "apps/web"
+
+    try {
+        npm run lint
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Frontend lint failed."
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+Run-Check "Frontend production build" {
+    Push-Location "apps/web"
+
+    try {
+        npm run build
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Frontend build failed."
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+# 4. Basic secret-file check
 Run-Check "No unexpected .env files exist" {
     $envFiles = Get-ChildItem -Path . -Recurse -Force -File `
         -ErrorAction SilentlyContinue |
@@ -80,7 +111,7 @@ Run-Check "No unexpected .env files exist" {
     }
 }
 
-# 4. Git staged-file safety
+# 5. Git staged-file safety
 Run-Check "No obvious secret files are staged" {
     $stagedFiles = git diff --cached --name-only
 
