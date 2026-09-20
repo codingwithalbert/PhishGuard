@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+
 function validateAnalyzeRequest(req, res, next) {
   const { url } = req.body;
 
@@ -47,6 +49,39 @@ function validateAnalyzeRequest(req, res, next) {
   next();
 }
 
+function validateAnalysisStatus(req, res, next) {
+  const { status } = req.body;
+
+  const allowedStatuses = ["active", "reviewed", "archived"];
+
+  if (
+    typeof status !== "string" ||
+    !allowedStatuses.includes(status)
+  ) {
+    return res.status(400).json({
+      success: false,
+      error: "Status must be active, reviewed, or archived"
+    });
+  }
+
+  next();
+}
+
+function validateMongoId(req, res, next) {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid analysis ID"
+    });
+  }
+
+  next();
+}
+
 module.exports = {
-  validateAnalyzeRequest
+  validateAnalyzeRequest,
+  validateAnalysisStatus,
+  validateMongoId
 };
