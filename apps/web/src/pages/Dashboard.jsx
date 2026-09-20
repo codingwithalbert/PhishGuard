@@ -131,24 +131,44 @@ function Dashboard() {
 
   return (
     <main>
-      <header>
-        <div>
-          <h1>PhishGuard Dashboard</h1>
+      <header className="dashboard-header">
+        <div className="brand">
+          <div className="brand-mark" aria-hidden="true">
+            PG
+          </div>
 
-          <p>
-            Welcome{user?.name ? `, ${user.name}` : ""}.
-          </p>
+          <div>
+            <h1>PhishGuard</h1>
+            <p>Phishing URL Analysis Dashboard</p>
+          </div>
         </div>
 
-        <button type="button" onClick={handleLogout}>
-          Logout
-        </button>
+        <nav
+          className="dashboard-nav"
+          aria-label="Dashboard navigation"
+        >
+          <a href="#scanner">Scanner</a>
+          <a href="#history">History</a>
+
+          <span className="user-role">
+            {user?.role || "user"}
+          </span>
+
+          <button type="button" onClick={handleLogout}>
+            Logout
+          </button>
+        </nav>
       </header>
 
-      {message && <p>{message}</p>}
+      {message && (
+        <p className="success-message">
+          {message}
+        </p>
+      )}
+
       {error && <p role="alert">{error}</p>}
 
-      <section>
+      <section id="scanner">
         <h2>Analyze a URL</h2>
 
         <p>
@@ -174,7 +194,7 @@ function Dashboard() {
       </section>
 
       {result && (
-        <section>
+        <section className="result-section">
           <h2>Analysis Result</h2>
 
           <p>
@@ -182,7 +202,10 @@ function Dashboard() {
           </p>
 
           <p>
-            <strong>Risk:</strong> {result.risk.toUpperCase()}
+            <strong>Risk:</strong>{" "}
+            <span className={`risk risk-${result.risk}`}>
+              {result.risk.toUpperCase()}
+            </span>
           </p>
 
           <p>
@@ -207,34 +230,49 @@ function Dashboard() {
         </section>
       )}
 
-      <section>
-        <h2>Analysis History</h2>
+      <section id="history">
+        <div className="section-heading">
+          <div>
+            <h2>Analysis History</h2>
+            <p>
+              Review and manage your previously analyzed URLs.
+            </p>
+          </div>
+
+          <span className="history-count">
+            {analyses.length}{" "}
+            {analyses.length === 1 ? "scan" : "scans"}
+          </span>
+        </div>
 
         {historyLoading ? (
           <p>Loading analysis history...</p>
         ) : analyses.length === 0 ? (
           <p>No analyses yet.</p>
         ) : (
-          <div>
+          <div className="history-grid">
             {analyses.map((analysis) => {
               const analysisId = analysis._id || analysis.id;
 
               return (
                 <article key={analysisId}>
-                  <h3>{analysis.url}</h3>
+                  <div className="history-card-heading">
+                    <h3>{analysis.url}</h3>
 
-                  <p>
-                    <strong>Risk:</strong>{" "}
-                    {analysis.risk.toUpperCase()}
-                  </p>
+                    <span
+                      className={`risk risk-${analysis.risk}`}
+                    >
+                      {analysis.risk.toUpperCase()}
+                    </span>
+                  </div>
 
                   <p>
                     <strong>Score:</strong> {analysis.score}
                   </p>
 
-                  <div>
+                  <div className="status-control">
                     <label htmlFor={`status-${analysisId}`}>
-                      <strong>Status:</strong>
+                      Status
                     </label>
 
                     <select
@@ -253,7 +291,7 @@ function Dashboard() {
                     </select>
                   </div>
 
-                  <p>
+                  <p className="created-date">
                     <strong>Created:</strong>{" "}
                     {new Date(
                       analysis.createdAt
