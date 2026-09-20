@@ -12,11 +12,32 @@ const errorHandler = require("./middleware/error.middleware");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+function validateEnvironment() {
+  const requiredVariables = [
+    "MONGODB_URI",
+    "JWT_SECRET"
+  ];
+
+  const missingVariables = requiredVariables.filter(
+    (variable) => !process.env[variable]
+  );
+
+  if (missingVariables.length > 0) {
+    throw new Error(
+      `Missing required environment variable(s): ${missingVariables.join(", ")}`
+    );
+  }
+}
+
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
-  credentials: true
-}));
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true
+  })
+);
+
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
@@ -34,6 +55,8 @@ app.use(errorHandler);
 
 async function startServer() {
   try {
+    validateEnvironment();
+
     await connectDB();
 
     app.listen(PORT, () => {
