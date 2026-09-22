@@ -47,6 +47,20 @@ export function loginUser(email, password) {
   });
 }
 
+export function verifyStaffAccess() {
+  return request("/api/auth/staff-test", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function verifyAdminAccess() {
+  return request("/api/auth/admin-test", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
 export function analyzeUrl(url) {
   return request("/api/analyze", {
     method: "POST",
