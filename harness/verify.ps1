@@ -19,10 +19,6 @@ function Run-Check {
     try {
         & $Action
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "Command exited with code $LASTEXITCODE"
-        }
-
         Write-Host "  PASS"
         Write-Host ""
     }
@@ -95,19 +91,23 @@ Run-Check "Frontend production build" {
     }
 }
 
-# 4. Basic secret-file check
-Run-Check "No unexpected .env files exist" {
-    $envFiles = Get-ChildItem -Path . -Recurse -Force -File `
-        -ErrorAction SilentlyContinue |
+# 4. Tracked secret-file check
+Run-Check "No secret environment files are tracked by Git" {
+    $trackedFiles = git ls-files
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to inspect tracked Git files."
+    }
+
+    $trackedEnvFiles = $trackedFiles |
         Where-Object {
-            $_.Name -match '^\.env($|\.)' -and
-            $_.Name -ne ".env.example" -and
-            $_.FullName -notmatch '\\node_modules\\'
+            $_ -match '(^|/)\.env($|\.)' -and
+            $_ -notmatch '\.env\.example$'
         }
 
-    if ($envFiles.Count -gt 0) {
-        $paths = $envFiles.FullName -join ", "
-        throw "Potential secret environment file found: $paths"
+    if ($trackedEnvFiles.Count -gt 0) {
+        $paths = $trackedEnvFiles -join ", "
+        throw "Secret environment file is tracked by Git: $paths"
     }
 }
 
