@@ -3,7 +3,8 @@ const assert = require("node:assert/strict");
 
 const {
   validateAnalyzeRequest,
-  validateAwarenessSubmission
+  validateAwarenessSubmission,
+  validatePhishingIdentificationSubmission
 } = require("../src/middleware/validate.middleware");
 
 function runMiddleware(body, middleware = validateAnalyzeRequest) {
@@ -67,6 +68,38 @@ function runAwarenessMiddleware(body) {
 
 function assertAwarenessValidationFails(body) {
   const result = runAwarenessMiddleware(body);
+
+  assert.equal(result.nextCalled, false);
+  assert.equal(result.response.status, 400);
+  assert.equal(result.response.data.success, false);
+}
+
+const correctPhishingAnswers = [
+  "B",
+  "C",
+  "A",
+  "D",
+  "B",
+  "A",
+  "C",
+  "B",
+  "D",
+  "A"
+];
+
+function makeValidPhishingAnswers() {
+  return correctPhishingAnswers.map((selectedAnswer, index) => ({
+    scenarioId: index + 1,
+    selectedAnswer
+  }));
+}
+
+function runPhishingMiddleware(body) {
+  return runMiddleware(body, validatePhishingIdentificationSubmission);
+}
+
+function assertPhishingValidationFails(body) {
+  const result = runPhishingMiddleware(body);
 
   assert.equal(result.nextCalled, false);
   assert.equal(result.response.status, 400);
@@ -229,6 +262,108 @@ test("awareness validation rejects server-owned top-level fields", () => {
 test("awareness validation accepts a shuffled complete submission", () => {
   const answers = makeValidAwarenessAnswers().reverse();
   const result = runAwarenessMiddleware({ answers });
+
+  assert.equal(result.nextCalled, true);
+  assert.equal(result.response, undefined);
+  assert.deepEqual(result.req.body.answers, answers);
+});
+
+test("phishing validation rejects a missing answers field", () => {
+  assertPhishingValidationFails({});
+});
+
+test("phishing validation rejects non-object and non-array bodies", () => {
+  assertPhishingValidationFails(null);
+  assertPhishingValidationFails([]);
+  assertPhishingValidationFails({ answers: "not-an-array" });
+});
+
+test("phishing validation rejects fewer or more than 10 answers", () => {
+  const answers = makeValidPhishingAnswers();
+
+  assertPhishingValidationFails({ answers: answers.slice(0, 9) });
+  assertPhishingValidationFails({
+    answers: [...answers, { scenarioId: 11, selectedAnswer: "A" }]
+  });
+});
+
+test("phishing validation rejects missing, non-integer, and unknown scenario IDs", () => {
+  const missingScenarioId = makeValidPhishingAnswers();
+  delete missingScenarioId[0].scenarioId;
+  assertPhishingValidationFails({ answers: missingScenarioId });
+
+  const stringScenarioId = makeValidPhishingAnswers();
+  stringScenarioId[0].scenarioId = "1";
+  assertPhishingValidationFails({ answers: stringScenarioId });
+
+  const decimalScenarioId = makeValidPhishingAnswers();
+  decimalScenarioId[0].scenarioId = 1.5;
+  assertPhishingValidationFails({ answers: decimalScenarioId });
+
+  const unknownScenarioId = makeValidPhishingAnswers();
+  unknownScenarioId[0].scenarioId = 11;
+  assertPhishingValidationFails({ answers: unknownScenarioId });
+});
+
+test("phishing validation rejects duplicate scenario IDs", () => {
+  const answers = makeValidPhishingAnswers();
+
+  answers[1].scenarioId = answers[0].scenarioId;
+
+  assertPhishingValidationFails({ answers });
+});
+
+test("phishing validation rejects missing or invalid selected answers", () => {
+  const missingSelectedAnswer = makeValidPhishingAnswers();
+  delete missingSelectedAnswer[0].selectedAnswer;
+  assertPhishingValidationFails({ answers: missingSelectedAnswer });
+
+  const nonStringSelectedAnswer = makeValidPhishingAnswers();
+  nonStringSelectedAnswer[0].selectedAnswer = 1;
+  assertPhishingValidationFails({ answers: nonStringSelectedAnswer });
+
+  const lowercaseSelectedAnswer = makeValidPhishingAnswers();
+  lowercaseSelectedAnswer[0].selectedAnswer = "b";
+  assertPhishingValidationFails({ answers: lowercaseSelectedAnswer });
+
+  const unknownSelectedAnswer = makeValidPhishingAnswers();
+  unknownSelectedAnswer[0].selectedAnswer = "E";
+  assertPhishingValidationFails({ answers: unknownSelectedAnswer });
+});
+
+test("phishing validation rejects extra answer fields", () => {
+  const answers = makeValidPhishingAnswers();
+
+  answers[0].correctAnswer = "B";
+
+  assertPhishingValidationFails({ answers });
+});
+
+test("phishing validation rejects server-owned top-level fields", () => {
+  const serverOwnedFields = [
+    "user",
+    "rawScore",
+    "score",
+    "totalScenarios",
+    "completedAt",
+    "role",
+    "createdAt"
+  ];
+
+  for (const field of serverOwnedFields) {
+    const body = {
+      answers: makeValidPhishingAnswers()
+    };
+
+    body[field] = "client-controlled";
+
+    assertPhishingValidationFails(body);
+  }
+});
+
+test("phishing validation accepts a shuffled complete submission", () => {
+  const answers = makeValidPhishingAnswers().reverse();
+  const result = runPhishingMiddleware({ answers });
 
   assert.equal(result.nextCalled, true);
   assert.equal(result.response, undefined);
