@@ -12,7 +12,11 @@ async function request(endpoint, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || "Something went wrong");
+    const error = new Error(data.error || "Something went wrong");
+
+    error.status = response.status;
+
+    throw error;
   }
 
   return data;
@@ -91,6 +95,30 @@ export function updateAnalysis(id, status) {
 export function deleteAnalysis(id) {
   return request(`/api/analyze/${id}`, {
     method: "DELETE",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getAwarenessQuestions() {
+  return request("/api/awareness/questions", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function submitAwarenessAssessment(answers) {
+  return request("/api/awareness/submit", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      answers
+    })
+  });
+}
+
+export function getLatestAwarenessAssessment() {
+  return request("/api/awareness/latest", {
+    method: "GET",
     headers: getAuthHeaders()
   });
 }

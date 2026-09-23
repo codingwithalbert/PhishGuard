@@ -617,3 +617,292 @@ main:not(:has(.dashboard-header)) > form button {
     width: 100%;
   }
 }
+
+/* Awareness Assessment */
+
+.awareness-page {
+  width: min(900px, calc(100% - 2rem));
+}
+
+.awareness-header {
+  position: static;
+  background: var(--bg);
+  backdrop-filter: none;
+}
+
+.awareness-intro {
+  margin-bottom: 1.5rem;
+  padding: 0 0 1.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.awareness-page-title {
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.awareness-intro p {
+  max-width: 65ch;
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.awareness-result-section,
+.assessment-section {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.awareness-result-section h2,
+.assessment-section h2 {
+  margin-bottom: 0.45rem;
+}
+
+.awareness-score-label {
+  margin: 1.25rem 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.awareness-score {
+  margin: 0 0 1rem;
+  color: var(--primary);
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.awareness-score span {
+  margin-left: 0.35rem;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.awareness-result-section > p:not(.awareness-score-label):not(.awareness-score):not(.success-message),
+.awareness-empty-state p {
+  color: var(--muted);
+}
+
+.awareness-empty-state {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.awareness-result-success {
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.awareness-result-success .awareness-score {
+  color: var(--success);
+}
+
+.awareness-inline-error {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  border-radius: 8px;
+  background: rgba(251, 113, 133, 0.08);
+  color: #fda4af;
+}
+
+.awareness-inline-error p {
+  margin: 0 0 0.5rem;
+}
+
+.awareness-inline-error p:last-child {
+  margin-bottom: 0;
+}
+
+.awareness-inline-error button {
+  margin-top: 0.75rem;
+  background: transparent;
+  color: var(--danger);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+.awareness-inline-error button:hover {
+  background: rgba(251, 113, 133, 0.1);
+}
+
+.assessment-progress {
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.awareness-form {
+  margin-top: 0;
+}
+
+.awareness-question-list {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.awareness-question {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.awareness-question fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.awareness-question legend {
+  display: grid;
+  width: 100%;
+  gap: 0.4rem;
+  padding: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.question-number {
+  color: var(--primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.awareness-choices {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.awareness-choice {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: 0.7rem;
+  align-items: start;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 21, 37, 0.65);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.45;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.awareness-choice:hover {
+  border-color: #365572;
+  background: var(--surface-light);
+}
+
+.awareness-choice-selected {
+  border-color: rgba(56, 189, 248, 0.65);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.awareness-choice input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--primary);
+}
+
+.awareness-choice input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.assessment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.25rem;
+}
+
+.assessment-actions p {
+  max-width: 55ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.assessment-actions button {
+  min-width: 180px;
+  white-space: nowrap;
+}
+
+.awareness-status {
+  color: var(--muted);
+}
+
+.awareness-loading-state {
+  display: grid;
+  gap: 1rem;
+}
+
+.awareness-skeleton {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.awareness-skeleton span {
+  display: block;
+  height: 1rem;
+  border-radius: 4px;
+  background: var(--surface-light);
+}
+
+.awareness-skeleton span:nth-child(1) {
+  width: 88%;
+}
+
+.awareness-skeleton span:nth-child(2) {
+  width: 72%;
+}
+
+.awareness-skeleton span:nth-child(3) {
+  width: 80%;
+}
+
+@media (max-width: 720px) {
+  .awareness-page {
+    width: min(100% - 1.25rem, 900px);
+  }
+
+  .awareness-intro {
+    padding: 0 0 1rem;
+  }
+
+  .awareness-page-title {
+    font-size: 1.75rem;
+  }
+
+  .awareness-score {
+    font-size: 2.5rem;
+  }
+
+  .assessment-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .assessment-actions button {
+    width: 100%;
+  }
+}

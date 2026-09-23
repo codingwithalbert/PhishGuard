@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import AwarenessAssessment from "./pages/AwarenessAssessment";
 
 function App() {
   return (
@@ -24,6 +25,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/awareness"
+          element={
+            <ProtectedRoute>
+              <AwarenessAssessment />
             </ProtectedRoute>
           }
         />
