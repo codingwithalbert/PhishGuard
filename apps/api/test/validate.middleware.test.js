@@ -4,12 +4,19 @@ const assert = require("node:assert/strict");
 const {
   validateAnalyzeRequest,
   validateAwarenessSubmission,
-  validatePhishingIdentificationSubmission
+  validatePhishingIdentificationSubmission,
+  validateTrainingCompletionRequest
 } = require("../src/middleware/validate.middleware");
 
-function runMiddleware(body, middleware = validateAnalyzeRequest) {
+function runMiddleware(
+  body,
+  middleware = validateAnalyzeRequest,
+  requestOptions = {}
+) {
   const req = {
-    body: body
+    body,
+    params: requestOptions.params || {},
+    headers: requestOptions.headers || {}
   };
 
   let response;
@@ -100,6 +107,21 @@ function runPhishingMiddleware(body) {
 
 function assertPhishingValidationFails(body) {
   const result = runPhishingMiddleware(body);
+
+  assert.equal(result.nextCalled, false);
+  assert.equal(result.response.status, 400);
+  assert.equal(result.response.data.success, false);
+}
+
+function runTrainingMiddleware(moduleId, body, headers = {}) {
+  return runMiddleware(body, validateTrainingCompletionRequest, {
+    params: { moduleId },
+    headers
+  });
+}
+
+function assertTrainingValidationFails(moduleId, body, headers = {}) {
+  const result = runTrainingMiddleware(moduleId, body, headers);
 
   assert.equal(result.nextCalled, false);
   assert.equal(result.response.status, 400);
@@ -368,4 +390,81 @@ test("phishing validation accepts a shuffled complete submission", () => {
   assert.equal(result.nextCalled, true);
   assert.equal(result.response, undefined);
   assert.deepEqual(result.req.body.answers, answers);
+});
+
+test("training validation accepts canonical module IDs 1, 2, and 3", () => {
+  for (const moduleId of ["1", "2", "3"]) {
+    const result = runTrainingMiddleware(moduleId, undefined);
+
+    assert.equal(result.nextCalled, true);
+    assert.equal(result.response, undefined);
+    assert.equal(result.req.params.moduleId, Number(moduleId));
+  }
+});
+
+test("training validation rejects missing and malformed module IDs", () => {
+  const invalidModuleIds = [
+    undefined,
+    "",
+    "0",
+    "4",
+    "01",
+    "1.0",
+    "+1",
+    "-1",
+    "1.5",
+    "abc",
+    1
+  ];
+
+  for (const moduleId of invalidModuleIds) {
+    assertTrainingValidationFails(moduleId, undefined);
+  }
+});
+
+test("training validation accepts no body and an empty JSON object", () => {
+  const noBody = runTrainingMiddleware("1", undefined, {
+    "content-type": "application/json"
+  });
+  assert.equal(noBody.nextCalled, true);
+  assert.equal(noBody.response, undefined);
+
+  const emptyObject = runTrainingMiddleware("2", {});
+  assert.equal(emptyObject.nextCalled, true);
+  assert.equal(emptyObject.response, undefined);
+});
+
+test("training validation rejects non-empty and invalid body types", () => {
+  for (const body of [[], "body", null, { user: "user-id" }]) {
+    assertTrainingValidationFails("1", body);
+  }
+});
+
+test("training validation rejects server-owned completion fields", () => {
+  const serverOwnedFields = [
+    "user",
+    "userId",
+    "completedAt",
+    "completedModules",
+    "totalModules",
+    "trainingExposure",
+    "role",
+    "unexpected"
+  ];
+
+  for (const field of serverOwnedFields) {
+    assertTrainingValidationFails("1", {
+      [field]: "client-controlled"
+    });
+  }
+});
+
+test("training validation rejects unparsed non-JSON bodies", () => {
+  assertTrainingValidationFails("1", undefined, {
+    "content-type": "text/plain"
+  });
+
+  assertTrainingValidationFails("1", undefined, {
+    "content-length": "4"
+  });
 });

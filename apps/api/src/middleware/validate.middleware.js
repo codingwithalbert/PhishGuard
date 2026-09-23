@@ -9,6 +9,9 @@ const {
   getPhishingIdentificationScenarioIds,
   getValidSelectedAnswers: getPhishingValidSelectedAnswers
 } = require("../services/phishingIdentification.service");
+const {
+  getTrainingModuleIds
+} = require("../services/training.service");
 
 const AWARENESS_QUESTION_IDS = new Set(getAwarenessQuestionIds());
 const AWARENESS_SELECTED_ANSWERS = new Set(getValidSelectedAnswers());
@@ -18,6 +21,7 @@ const PHISHING_IDENTIFICATION_SCENARIO_IDS = new Set(
 const PHISHING_IDENTIFICATION_SELECTED_ANSWERS = new Set(
   getPhishingValidSelectedAnswers()
 );
+const TRAINING_MODULE_IDS = new Set(getTrainingModuleIds());
 
 function sendAwarenessValidationError(res, error) {
   return res.status(400).json({
@@ -237,6 +241,70 @@ function validatePhishingIdentificationSubmission(req, res, next) {
   next();
 }
 
+function sendTrainingValidationError(res, error) {
+  return res.status(400).json({
+    success: false,
+    error
+  });
+}
+
+function validateTrainingCompletionRequest(req, res, next) {
+  const { moduleId } = req.params || {};
+
+  if (typeof moduleId !== "string" || !TRAINING_MODULE_IDS.has(Number(moduleId)) || !/^[1-3]$/.test(moduleId)) {
+    return sendTrainingValidationError(
+      res,
+      "Module ID must be 1, 2, or 3"
+    );
+  }
+
+  const headers = req.headers || {};
+  const contentType = headers["content-type"];
+  const contentLength = Number(headers["content-length"]);
+  const hasContentType =
+    typeof contentType === "string" && contentType.length > 0;
+  const hasTransferEncoding = Boolean(headers["transfer-encoding"]);
+  const hasDeclaredBody =
+    hasContentType ||
+    hasTransferEncoding ||
+    (Number.isFinite(contentLength) && contentLength > 0);
+
+  if (
+    hasContentType &&
+    !contentType.toLowerCase().startsWith("application/json")
+  ) {
+    return sendTrainingValidationError(
+      res,
+      "Request body must be empty or an empty JSON object"
+    );
+  }
+
+  if (hasDeclaredBody && req.body === undefined && !hasContentType) {
+    return sendTrainingValidationError(
+      res,
+      "Request body must be empty or an empty JSON object"
+    );
+  }
+
+  if (req.body !== undefined) {
+    if (
+      req.body === null ||
+      typeof req.body !== "object" ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length > 0
+    ) {
+      return sendTrainingValidationError(
+        res,
+        "Request body must be empty or an empty JSON object"
+      );
+    }
+  }
+
+  req.params.moduleId = Number(moduleId);
+
+  next();
+}
+
 function validateAnalyzeRequest(req, res, next) {
   const { url } = req.body;
 
@@ -320,6 +388,7 @@ function validateMongoId(req, res, next) {
 module.exports = {
   validateAwarenessSubmission,
   validatePhishingIdentificationSubmission,
+  validateTrainingCompletionRequest,
   validateAnalyzeRequest,
   validateAnalysisStatus,
   validateMongoId
