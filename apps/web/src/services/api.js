@@ -51,20 +51,6 @@ export function loginUser(email, password) {
   });
 }
 
-export function verifyStaffAccess() {
-  return request("/api/auth/staff-test", {
-    method: "GET",
-    headers: getAuthHeaders()
-  });
-}
-
-export function verifyAdminAccess() {
-  return request("/api/auth/admin-test", {
-    method: "GET",
-    headers: getAuthHeaders()
-  });
-}
-
 export function analyzeUrl(url) {
   return request("/api/analyze", {
     method: "POST",
@@ -118,6 +104,30 @@ export function submitAwarenessAssessment(answers) {
 
 export function getLatestAwarenessAssessment() {
   return request("/api/awareness/latest", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getPhishingIdentificationScenarios() {
+  return request("/api/phishing-identification/scenarios", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function submitPhishingIdentificationAssessment(answers) {
+  return request("/api/phishing-identification/submit", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      answers
+    })
+  });
+}
+
+export function getLatestPhishingIdentificationAssessment() {
+  return request("/api/phishing-identification/latest", {
     method: "GET",
     headers: getAuthHeaders()
   });

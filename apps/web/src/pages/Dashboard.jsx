@@ -4,9 +4,7 @@ import {
   analyzeUrl,
   deleteAnalysis,
   getAnalyses,
-  updateAnalysis,
-  verifyAdminAccess,
-  verifyStaffAccess
+  updateAnalysis
 } from "../services/api";
 
 function Dashboard() {
@@ -22,8 +20,6 @@ function Dashboard() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [roleLoading, setRoleLoading] = useState("");
-  const [roleResult, setRoleResult] = useState(null);
 
   useEffect(() => {
     async function loadHistory() {
@@ -133,56 +129,6 @@ function Dashboard() {
     }
   }
 
-  async function handleStaffAccess() {
-    setRoleLoading("staff");
-    setRoleResult(null);
-
-    try {
-      const data = await verifyStaffAccess();
-
-      setRoleResult({
-        success: true,
-        title: "Staff Access Granted",
-        message:
-          data.message ||
-          "The backend verified access to the Staff function."
-      });
-    } catch (err) {
-      setRoleResult({
-        success: false,
-        title: "Staff Access Denied",
-        message: err.message
-      });
-    } finally {
-      setRoleLoading("");
-    }
-  }
-
-  async function handleAdminAccess() {
-    setRoleLoading("admin");
-    setRoleResult(null);
-
-    try {
-      const data = await verifyAdminAccess();
-
-      setRoleResult({
-        success: true,
-        title: "Admin Access Granted",
-        message:
-          data.message ||
-          "The backend verified access to the Admin function."
-      });
-    } catch (err) {
-      setRoleResult({
-        success: false,
-        title: "Admin Access Denied",
-        message: err.message
-      });
-    } finally {
-      setRoleLoading("");
-    }
-  }
-
   return (
     <main>
       <header className="dashboard-header">
@@ -203,8 +149,8 @@ function Dashboard() {
         >
           <a href="#scanner">Scanner</a>
           <a href="#history">History</a>
-          <a href="#role-access">Role Access</a>
           <Link to="/awareness">Awareness</Link>
+          <Link to="/phishing-identification">Phishing Identification</Link>
 
           <span className="user-role">
             {user?.role || "user"}
@@ -223,58 +169,6 @@ function Dashboard() {
       )}
 
       {error && <p role="alert">{error}</p>}
-
-      <section id="role-access">
-        <div className="section-heading">
-          <div>
-            <h2>Role-Based Access Control</h2>
-            <p>
-              Test protected Staff and Admin functions using your
-              authenticated account.
-            </p>
-          </div>
-
-          <span className="user-role">
-            Current role: {user?.role || "user"}
-          </span>
-        </div>
-
-        <div className="role-actions">
-          <button
-            type="button"
-            onClick={handleStaffAccess}
-            disabled={Boolean(roleLoading)}
-          >
-            {roleLoading === "staff"
-              ? "Checking..."
-              : "Open Staff Function"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleAdminAccess}
-            disabled={Boolean(roleLoading)}
-          >
-            {roleLoading === "admin"
-              ? "Checking..."
-              : "Open Admin Dashboard"}
-          </button>
-        </div>
-
-        {roleResult && (
-          <div
-            className={
-              roleResult.success
-                ? "role-result role-result-success"
-                : "role-result role-result-denied"
-            }
-            role="status"
-          >
-            <h3>{roleResult.title}</h3>
-            <p>{roleResult.message}</p>
-          </div>
-        )}
-      </section>
 
       <section id="scanner">
         <h2>Analyze a URL</h2>
