@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AwarenessAssessment from "./pages/AwarenessAssessment";
 import PhishingIdentificationAssessment from "./pages/PhishingIdentificationAssessment";
+import Training from "./pages/Training";
 
 function App() {
   return (
@@ -44,6 +45,15 @@ function App() {
           element={
             <ProtectedRoute>
               <PhishingIdentificationAssessment />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/training"
+          element={
+            <ProtectedRoute>
+              <Training />
             </ProtectedRoute>
           }
         />

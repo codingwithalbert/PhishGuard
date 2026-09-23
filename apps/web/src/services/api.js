@@ -132,3 +132,27 @@ export function getLatestPhishingIdentificationAssessment() {
     headers: getAuthHeaders()
   });
 }
+
+export function getTrainingModules() {
+  return request("/api/training/modules", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getTrainingProgress() {
+  return request("/api/training/progress", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function completeTrainingModule(moduleId) {
+  return request(
+    `/api/training/modules/${encodeURIComponent(moduleId)}/complete`,
+    {
+      method: "POST",
+      headers: getAuthHeaders()
+    }
+  );
+}

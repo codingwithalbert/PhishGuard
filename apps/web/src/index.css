@@ -862,3 +862,209 @@ main:not(:has(.dashboard-header)) > form button {
     width: 100%;
   }
 }
+
+/* Training Exposure */
+
+.training-page {
+  width: min(900px, calc(100% - 2rem));
+}
+
+.training-intro-note {
+  max-width: 65ch;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.training-progress-section,
+.training-modules-section {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.training-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.training-progress-stat {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(8, 21, 37, 0.7);
+}
+
+.training-progress-label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.training-progress-value {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--primary);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.training-reload-button {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--primary);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.training-reload-button:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--primary);
+}
+
+.training-completion-status {
+  margin: 1rem 0 0;
+  color: var(--success);
+}
+
+.training-completion-status:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+
+.training-module-list {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.training-module {
+  margin: 0;
+  padding: 1.5rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.training-module-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.training-module h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+
+.training-module-objective {
+  max-width: 65ch;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.training-module-status {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.training-module-completed .training-module-status {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.08);
+  color: #6ee7b7;
+}
+
+.training-completion-date {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.training-module-content {
+  margin-top: 1.25rem;
+}
+
+.training-content-section {
+  margin-top: 1rem;
+}
+
+.training-content-section:first-child {
+  margin-top: 0;
+}
+
+.training-content-section h4 {
+  margin: 0 0 0.35rem;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.training-content-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.training-module-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.training-module-actions p {
+  max-width: 55ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.training-module-actions button {
+  min-width: 190px;
+  background: var(--primary);
+  color: #03111c;
+  border-color: var(--primary);
+}
+
+.training-module-actions button:hover {
+  background: #7dd3fc;
+}
+
+@media (max-width: 720px) {
+  .training-page {
+    width: min(100% - 1.25rem, 900px);
+  }
+
+  .training-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .training-module-header {
+    flex-direction: column;
+  }
+
+  .training-module-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .training-module-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+}

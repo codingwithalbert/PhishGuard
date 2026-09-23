@@ -151,6 +151,7 @@ function Dashboard() {
           <a href="#history">History</a>
           <Link to="/awareness">Awareness</Link>
           <Link to="/phishing-identification">Phishing Identification</Link>
+          <Link to="/training">Training</Link>
 
           <span className="user-role">
             {user?.role || "user"}
