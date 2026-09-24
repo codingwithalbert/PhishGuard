@@ -10,6 +10,7 @@ const authRoutes = require("./routes/auth.routes");
 const awarenessRoutes = require("./routes/awareness.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const phishingIdentificationRoutes = require("./routes/phishingIdentification.routes");
+const progressRoutes = require("./routes/progress.routes");
 const trainingRoutes = require("./routes/training.routes");
 const errorHandler = require("./middleware/error.middleware");
 
@@ -50,6 +51,7 @@ app.use("/api/analyze", analysisRoutes);
 app.use("/api/awareness", awarenessRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/phishing-identification", phishingIdentificationRoutes);
+app.use("/api/progress", progressRoutes);
 app.use("/api/training", trainingRoutes);
 
 app.get("/api/health", (req, res) => {

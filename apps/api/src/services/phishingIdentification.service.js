@@ -1,6 +1,7 @@
 const PhishingIdentificationAssessment = require("../models/PhishingIdentificationAssessment");
 
 const PHISHING_IDENTIFICATION_TOTAL_SCENARIOS = 10;
+const PHISHING_IDENTIFICATION_HISTORY_LIMIT = 10;
 
 const PHISHING_IDENTIFICATION_SCENARIOS = [
   {
@@ -305,6 +306,24 @@ function toPhishingIdentificationAssessmentResult(assessment) {
   };
 }
 
+async function getPhishingIdentificationAssessmentHistoryForUser(userId) {
+  const assessments = await PhishingIdentificationAssessment.find({
+    user: userId
+  })
+    .select({
+      _id: 1,
+      rawScore: 1,
+      score: 1,
+      totalScenarios: 1,
+      completedAt: 1
+    })
+    .sort({ completedAt: -1, _id: -1 })
+    .limit(PHISHING_IDENTIFICATION_HISTORY_LIMIT)
+    .lean();
+
+  return assessments.map(toPhishingIdentificationAssessmentResult);
+}
+
 async function getLatestPhishingIdentificationAssessmentForUser(userId) {
   const assessment = await PhishingIdentificationAssessment.findOne({
     user: userId
@@ -325,6 +344,7 @@ async function getLatestPhishingIdentificationAssessmentForUser(userId) {
 module.exports = {
   PHISHING_IDENTIFICATION_TOTAL_SCENARIOS,
   getLatestPhishingIdentificationAssessmentForUser,
+  getPhishingIdentificationAssessmentHistoryForUser,
   getPhishingIdentificationScenarios,
   getPhishingIdentificationScenarioIds,
   getValidSelectedAnswers,

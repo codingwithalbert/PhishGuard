@@ -1,6 +1,7 @@
 const AwarenessAssessment = require("../models/AwarenessAssessment");
 
 const AWARENESS_TOTAL_QUESTIONS = 10;
+const AWARENESS_HISTORY_LIMIT = 10;
 
 const AWARENESS_QUESTIONS = [
   {
@@ -294,6 +295,24 @@ function toAwarenessAssessmentResult(assessment) {
   };
 }
 
+async function getAwarenessAssessmentHistoryForUser(userId) {
+  const assessments = await AwarenessAssessment.find({
+    user: userId
+  })
+    .select({
+      _id: 1,
+      rawScore: 1,
+      score: 1,
+      totalQuestions: 1,
+      completedAt: 1
+    })
+    .sort({ completedAt: -1, _id: -1 })
+    .limit(AWARENESS_HISTORY_LIMIT)
+    .lean();
+
+  return assessments.map(toAwarenessAssessmentResult);
+}
+
 async function getLatestAwarenessAssessmentForUser(userId) {
   const assessment = await AwarenessAssessment.findOne({
     user: userId
@@ -313,6 +332,7 @@ async function getLatestAwarenessAssessmentForUser(userId) {
 
 module.exports = {
   AWARENESS_TOTAL_QUESTIONS,
+  getAwarenessAssessmentHistoryForUser,
   getAwarenessQuestions,
   getAwarenessQuestionIds,
   getLatestAwarenessAssessmentForUser,
