@@ -272,6 +272,7 @@ function TrainingPage() {
           aria-label="Training navigation"
         >
           <Link to="/dashboard">Dashboard</Link>
+          <Link to="/progress">Progress</Link>
           <button type="button" onClick={handleLogout}>
             Logout
           </button>

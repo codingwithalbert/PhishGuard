@@ -262,6 +262,7 @@ function Dashboard() {
           <Link to="/awareness">Awareness</Link>
           <Link to="/phishing-identification">Phishing Identification</Link>
           <Link to="/training">Training</Link>
+          <Link to="/progress">Progress</Link>
 
           <span className="user-role">
             {user?.role || "user"}

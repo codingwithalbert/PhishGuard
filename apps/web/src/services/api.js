@@ -75,6 +75,13 @@ export function getDashboardSummary() {
   });
 }
 
+export function getProgress() {
+  return request("/api/progress", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
 export function updateAnalysis(id, status) {
   return request(`/api/analyze/${id}`, {
     method: "PATCH",

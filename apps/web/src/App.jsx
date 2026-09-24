@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Progress from "./pages/Progress";
 import AwarenessAssessment from "./pages/AwarenessAssessment";
 import PhishingIdentificationAssessment from "./pages/PhishingIdentificationAssessment";
 import Training from "./pages/Training";
@@ -27,6 +28,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/progress"
+          element={
+            <ProtectedRoute>
+              <Progress />
             </ProtectedRoute>
           }
         />
