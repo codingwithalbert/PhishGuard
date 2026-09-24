@@ -1,3 +1,5 @@
+const PhishingIdentificationAssessment = require("../models/PhishingIdentificationAssessment");
+
 const PHISHING_IDENTIFICATION_TOTAL_SCENARIOS = 10;
 
 const PHISHING_IDENTIFICATION_SCENARIOS = [
@@ -293,10 +295,39 @@ function scorePhishingIdentificationAnswers(answers) {
   };
 }
 
+function toPhishingIdentificationAssessmentResult(assessment) {
+  return {
+    id: assessment._id,
+    rawScore: assessment.rawScore,
+    score: assessment.score,
+    totalScenarios: assessment.totalScenarios,
+    completedAt: assessment.completedAt
+  };
+}
+
+async function getLatestPhishingIdentificationAssessmentForUser(userId) {
+  const assessment = await PhishingIdentificationAssessment.findOne({
+    user: userId
+  })
+    .select({
+      _id: 1,
+      rawScore: 1,
+      score: 1,
+      totalScenarios: 1,
+      completedAt: 1
+    })
+    .sort({ completedAt: -1, _id: -1 })
+    .lean();
+
+  return assessment ? toPhishingIdentificationAssessmentResult(assessment) : null;
+}
+
 module.exports = {
   PHISHING_IDENTIFICATION_TOTAL_SCENARIOS,
+  getLatestPhishingIdentificationAssessmentForUser,
   getPhishingIdentificationScenarios,
   getPhishingIdentificationScenarioIds,
   getValidSelectedAnswers,
-  scorePhishingIdentificationAnswers
+  scorePhishingIdentificationAnswers,
+  toPhishingIdentificationAssessmentResult
 };

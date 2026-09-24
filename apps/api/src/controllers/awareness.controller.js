@@ -1,18 +1,10 @@
 const AwarenessAssessment = require("../models/AwarenessAssessment");
 const {
   getAwarenessQuestions,
-  scoreAwarenessAnswers
+  getLatestAwarenessAssessmentForUser,
+  scoreAwarenessAnswers,
+  toAwarenessAssessmentResult
 } = require("../services/awareness.service");
-
-function toAssessmentResponse(assessment) {
-  return {
-    id: assessment._id,
-    rawScore: assessment.rawScore,
-    score: assessment.score,
-    totalQuestions: assessment.totalQuestions,
-    completedAt: assessment.completedAt
-  };
-}
 
 async function getQuestions(req, res, next) {
   try {
@@ -47,7 +39,7 @@ async function submitAssessment(req, res, next) {
     return res.status(201).json({
       success: true,
       message: "Awareness assessment submitted successfully",
-      assessment: toAssessmentResponse(savedAssessment)
+      assessment: toAwarenessAssessmentResult(savedAssessment)
     });
   } catch (error) {
     next(error);
@@ -56,9 +48,9 @@ async function submitAssessment(req, res, next) {
 
 async function getLatestAssessment(req, res, next) {
   try {
-    const assessment = await AwarenessAssessment.findOne({
-      user: req.user.userId
-    }).sort({ completedAt: -1, _id: -1 });
+    const assessment = await getLatestAwarenessAssessmentForUser(
+      req.user.userId
+    );
 
     if (!assessment) {
       return res.status(404).json({
@@ -69,7 +61,7 @@ async function getLatestAssessment(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      assessment: toAssessmentResponse(assessment)
+      assessment
     });
   } catch (error) {
     next(error);

@@ -1,4 +1,7 @@
-const { analyzeUrl } = require("../services/analysis.service");
+const {
+  analyzeUrl,
+  getAnalysesForUser
+} = require("../services/analysis.service");
 const Analysis = require("../models/Analysis");
 
 async function analyze(req, res, next) {
@@ -39,9 +42,7 @@ async function analyze(req, res, next) {
 
 async function getAnalyses(req, res, next) {
   try {
-    const analyses = await Analysis.find({
-      user: req.user.userId
-    }).sort({ createdAt: -1 });
+    const analyses = await getAnalysesForUser(req.user.userId);
 
     return res.status(200).json({
       success: true,

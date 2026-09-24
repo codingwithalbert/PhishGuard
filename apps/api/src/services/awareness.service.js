@@ -1,3 +1,5 @@
+const AwarenessAssessment = require("../models/AwarenessAssessment");
+
 const AWARENESS_TOTAL_QUESTIONS = 10;
 
 const AWARENESS_QUESTIONS = [
@@ -282,10 +284,39 @@ function scoreAwarenessAnswers(answers) {
   };
 }
 
+function toAwarenessAssessmentResult(assessment) {
+  return {
+    id: assessment._id,
+    rawScore: assessment.rawScore,
+    score: assessment.score,
+    totalQuestions: assessment.totalQuestions,
+    completedAt: assessment.completedAt
+  };
+}
+
+async function getLatestAwarenessAssessmentForUser(userId) {
+  const assessment = await AwarenessAssessment.findOne({
+    user: userId
+  })
+    .select({
+      _id: 1,
+      rawScore: 1,
+      score: 1,
+      totalQuestions: 1,
+      completedAt: 1
+    })
+    .sort({ completedAt: -1, _id: -1 })
+    .lean();
+
+  return assessment ? toAwarenessAssessmentResult(assessment) : null;
+}
+
 module.exports = {
   AWARENESS_TOTAL_QUESTIONS,
   getAwarenessQuestions,
   getAwarenessQuestionIds,
+  getLatestAwarenessAssessmentForUser,
   getValidSelectedAnswers,
-  scoreAwarenessAnswers
+  scoreAwarenessAnswers,
+  toAwarenessAssessmentResult
 };

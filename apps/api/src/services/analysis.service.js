@@ -1,3 +1,7 @@
+const Analysis = require("../models/Analysis");
+
+const DASHBOARD_RECENT_ANALYSIS_LIMIT = 5;
+
 function analyzeUrl(url) {
   let parsedUrl;
 
@@ -115,6 +119,51 @@ function analyzeUrl(url) {
   };
 }
 
+function getOwnedAnalysisFilter(userId) {
+  return { user: userId };
+}
+
+async function getAnalysesForUser(userId) {
+  return Analysis.find(getOwnedAnalysisFilter(userId)).sort({
+    createdAt: -1
+  });
+}
+
+async function countAnalysesForUser(userId) {
+  return Analysis.countDocuments(getOwnedAnalysisFilter(userId));
+}
+
+function toRecentAnalysisResult(analysis) {
+  return {
+    id: analysis._id,
+    url: analysis.url,
+    risk: analysis.risk,
+    score: analysis.score,
+    status: analysis.status,
+    createdAt: analysis.createdAt
+  };
+}
+
+async function getRecentAnalysesForUser(userId) {
+  const analyses = await Analysis.find(getOwnedAnalysisFilter(userId))
+    .select({
+      _id: 1,
+      url: 1,
+      risk: 1,
+      score: 1,
+      status: 1,
+      createdAt: 1
+    })
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(DASHBOARD_RECENT_ANALYSIS_LIMIT)
+    .lean();
+
+  return analyses.map(toRecentAnalysisResult);
+}
+
 module.exports = {
-  analyzeUrl
+  analyzeUrl,
+  countAnalysesForUser,
+  getAnalysesForUser,
+  getRecentAnalysesForUser
 };

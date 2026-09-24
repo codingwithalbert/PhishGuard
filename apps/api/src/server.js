@@ -8,6 +8,7 @@ const connectDB = require("./config/db");
 const analysisRoutes = require("./routes/analysis.routes");
 const authRoutes = require("./routes/auth.routes");
 const awarenessRoutes = require("./routes/awareness.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 const phishingIdentificationRoutes = require("./routes/phishingIdentification.routes");
 const trainingRoutes = require("./routes/training.routes");
 const errorHandler = require("./middleware/error.middleware");
@@ -47,6 +48,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analysisRoutes);
 app.use("/api/awareness", awarenessRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/phishing-identification", phishingIdentificationRoutes);
 app.use("/api/training", trainingRoutes);
 
