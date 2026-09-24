@@ -68,6 +68,13 @@ export function getAnalyses() {
   });
 }
 
+export function getDashboardSummary() {
+  return request("/api/dashboard/summary", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
 export function updateAnalysis(id, status) {
   return request(`/api/analyze/${id}`, {
     method: "PATCH",

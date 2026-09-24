@@ -1,11 +1,77 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   analyzeUrl,
   deleteAnalysis,
   getAnalyses,
+  getDashboardSummary,
   updateAnalysis
 } from "../services/api";
+
+function isSessionError(error) {
+  return error?.status === 401 || error?.status === 403;
+}
+
+function getErrorDetails(error, fallback) {
+  return {
+    message: error?.message || fallback,
+    status: error?.status
+  };
+}
+
+function formatDate(value) {
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : date.toLocaleString();
+}
+
+function isAssessmentSummary(value, totalKey) {
+  return (
+    value === null ||
+    (value &&
+      Number.isFinite(value.score) &&
+      Number.isFinite(value[totalKey]) &&
+      typeof value.completedAt === "string")
+  );
+}
+
+function isDashboardSummary(data) {
+  const trainingProgress = data?.trainingProgress;
+  const urlAnalyses = data?.urlAnalyses;
+
+  return (
+    data?.success === true &&
+    isAssessmentSummary(data.latestAwarenessAssessment, "totalQuestions") &&
+    isAssessmentSummary(
+      data.latestPhishingIdentificationAssessment,
+      "totalScenarios"
+    ) &&
+    trainingProgress &&
+    Number.isFinite(trainingProgress.completedModules) &&
+    Number.isFinite(trainingProgress.totalModules) &&
+    Number.isFinite(trainingProgress.trainingExposure) &&
+    urlAnalyses &&
+    Number.isInteger(urlAnalyses.total) &&
+    urlAnalyses.total >= 0 &&
+    Array.isArray(urlAnalyses.recent) &&
+    urlAnalyses.recent.every(
+      (analysis) =>
+        analysis &&
+        typeof analysis.id === "string" &&
+        typeof analysis.url === "string" &&
+        typeof analysis.risk === "string" &&
+        Number.isFinite(analysis.score) &&
+        typeof analysis.status === "string" &&
+        typeof analysis.createdAt === "string"
+    )
+  );
+}
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -20,6 +86,44 @@ function Dashboard() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(null);
+
+  const loadDashboardSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setSummary(null);
+
+    try {
+      const data = await getDashboardSummary();
+
+      if (!isDashboardSummary(data)) {
+        throw new Error(
+          "The dashboard summary could not be read in the expected format."
+        );
+      }
+
+      setSummary(data);
+    } catch (err) {
+      setSummaryError(
+        getErrorDetails(
+          err,
+          "The dashboard summary could not be loaded. Please try again."
+        )
+      );
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function loadOnMount() {
+      await loadDashboardSummary();
+    }
+
+    loadOnMount();
+  }, [loadDashboardSummary]);
 
   useEffect(() => {
     async function loadHistory() {
@@ -129,6 +233,12 @@ function Dashboard() {
     }
   }
 
+  const latestAwarenessAssessment = summary?.latestAwarenessAssessment;
+  const latestPhishingIdentificationAssessment =
+    summary?.latestPhishingIdentificationAssessment;
+  const trainingProgress = summary?.trainingProgress;
+  const urlAnalyses = summary?.urlAnalyses;
+
   return (
     <main>
       <header className="dashboard-header">
@@ -170,6 +280,280 @@ function Dashboard() {
       )}
 
       {error && <p role="alert">{error}</p>}
+
+      <section
+        className="dashboard-overview"
+        aria-labelledby="dashboard-overview-heading"
+        aria-busy={summaryLoading}
+      >
+        <div className="dashboard-overview-heading">
+          <div>
+            <h2 id="dashboard-overview-heading">Welcome to your dashboard</h2>
+            <p>
+              Review your latest assessment results, training progress, and
+              recent URL analysis activity.
+            </p>
+          </div>
+
+          <span className="dashboard-overview-label">Activity overview</span>
+        </div>
+
+        {summaryLoading ? (
+          <div
+            className="dashboard-overview-loading"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="awareness-skeleton" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <p className="awareness-status">Loading dashboard summary...</p>
+          </div>
+        ) : summaryError ? (
+          <div className="dashboard-overview-error" role="alert">
+            <p>{summaryError.message}</p>
+
+            {isSessionError(summaryError) ? (
+              <p>
+                <Link to="/login">Sign in again</Link>
+              </p>
+            ) : (
+              <button type="button" onClick={loadDashboardSummary}>
+                Try again
+              </button>
+            )}
+          </div>
+        ) : summary ? (
+          <>
+            <div className="dashboard-assessment-grid">
+              <div className="dashboard-summary-card">
+                <div className="dashboard-summary-card-heading">
+                  <h3>Awareness Assessment</h3>
+                  <span
+                    className={`dashboard-summary-status ${
+                      latestAwarenessAssessment !== null
+                        ? "dashboard-summary-status-completed"
+                        : "dashboard-summary-status-pending"
+                    }`}
+                  >
+                    {latestAwarenessAssessment !== null
+                      ? "Completed"
+                      : "Not yet completed"}
+                  </span>
+                </div>
+
+                {latestAwarenessAssessment !== null ? (
+                  <>
+                    <p className="dashboard-summary-score">
+                      <span>Score</span>
+                      <strong>
+                        {latestAwarenessAssessment.score}
+                      </strong>
+                    </p>
+                    <p className="dashboard-summary-detail">
+                      {latestAwarenessAssessment.totalQuestions} questions
+                      completed
+                    </p>
+                    <p className="dashboard-summary-detail">
+                      Completed{" "}
+                      <time dateTime={latestAwarenessAssessment.completedAt}>
+                        {formatDate(latestAwarenessAssessment.completedAt)}
+                      </time>
+                    </p>
+                  </>
+                ) : (
+                  <p className="dashboard-summary-empty">
+                    No completed Awareness Assessment yet.
+                  </p>
+                )}
+
+                <Link
+                  className="dashboard-card-action"
+                  to="/awareness"
+                >
+                  Open Awareness Assessment
+                </Link>
+              </div>
+
+              <div className="dashboard-summary-card">
+                <div className="dashboard-summary-card-heading">
+                  <h3>Phishing Identification Assessment</h3>
+                  <span
+                    className={`dashboard-summary-status ${
+                      latestPhishingIdentificationAssessment !== null
+                        ? "dashboard-summary-status-completed"
+                        : "dashboard-summary-status-pending"
+                    }`}
+                  >
+                    {latestPhishingIdentificationAssessment !== null
+                      ? "Completed"
+                      : "Not yet completed"}
+                  </span>
+                </div>
+
+                {latestPhishingIdentificationAssessment !== null ? (
+                  <>
+                    <p className="dashboard-summary-score">
+                      <span>Score</span>
+                      <strong>
+                        {latestPhishingIdentificationAssessment.score}
+                      </strong>
+                    </p>
+                    <p className="dashboard-summary-detail">
+                      {
+                        latestPhishingIdentificationAssessment.totalScenarios
+                      }{" "}
+                      scenarios completed
+                    </p>
+                    <p className="dashboard-summary-detail">
+                      Completed{" "}
+                      <time
+                        dateTime={
+                          latestPhishingIdentificationAssessment.completedAt
+                        }
+                      >
+                        {formatDate(
+                          latestPhishingIdentificationAssessment.completedAt
+                        )}
+                      </time>
+                    </p>
+                  </>
+                ) : (
+                  <p className="dashboard-summary-empty">
+                    No completed Phishing Identification Assessment yet.
+                  </p>
+                )}
+
+                <Link
+                  className="dashboard-card-action"
+                  to="/phishing-identification"
+                >
+                  Open Phishing Identification Assessment
+                </Link>
+              </div>
+            </div>
+
+            <div className="dashboard-overview-lower-grid">
+              <div className="dashboard-summary-card">
+                <div className="dashboard-summary-card-heading">
+                  <h3>Training</h3>
+                  <span className="dashboard-summary-status">
+                    Module completion
+                  </span>
+                </div>
+
+                <div className="dashboard-training-stats">
+                  <div>
+                    <span>Completed modules</span>
+                    <strong>
+                      {trainingProgress.completedModules}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Total modules</span>
+                    <strong>{trainingProgress.totalModules}</strong>
+                  </div>
+                  <div>
+                    <span>Training Exposure</span>
+                    <strong>
+                      {trainingProgress.trainingExposure}%
+                    </strong>
+                  </div>
+                </div>
+
+                <Link className="dashboard-card-action" to="/training">
+                  Open Training
+                </Link>
+              </div>
+
+              <div className="dashboard-summary-card dashboard-analysis-summary-card">
+                <div className="dashboard-summary-card-heading">
+                  <h3>URL analyses</h3>
+                  <span className="dashboard-summary-status">
+                    Owned by you
+                  </span>
+                </div>
+
+                <p className="dashboard-analysis-total">
+                  <strong>{urlAnalyses.total}</strong> total URL analyses
+                </p>
+
+                <div className="dashboard-recent-heading">
+                  <h4>Recent analyses</h4>
+                  <span>Up to 5 most recent</span>
+                </div>
+
+                {urlAnalyses.recent.length === 0 ? (
+                  <p className="dashboard-summary-empty">
+                    No URL analyses yet. Use Analyze URL to start your history.
+                  </p>
+                ) : (
+                  <ul className="dashboard-recent-list">
+                    {urlAnalyses.recent.map((analysis) => (
+                      <li
+                        className="dashboard-recent-item"
+                        key={analysis.id}
+                      >
+                        <div className="dashboard-recent-item-top">
+                          <span className="dashboard-recent-url">
+                            {analysis.url}
+                          </span>
+                          <span
+                            className={`risk risk-${analysis.risk}`}
+                          >
+                            {analysis.risk.toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="dashboard-recent-item-meta">
+                          <span>Score: {analysis.score}</span>
+                          <span>Status: {analysis.status}</span>
+                          <time dateTime={analysis.createdAt}>
+                            {formatDate(analysis.createdAt)}
+                          </time>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <a className="dashboard-card-action" href="#history">
+                  Review Analysis History
+                </a>
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        <nav
+          className="dashboard-quick-actions"
+          aria-label="Dashboard quick actions"
+        >
+          <h3>Quick actions</h3>
+
+          <ul>
+            <li>
+              <a href="#scanner">Analyze URL</a>
+            </li>
+            <li>
+              <a href="#history">Review History</a>
+            </li>
+            <li>
+              <Link to="/awareness">Awareness Assessment</Link>
+            </li>
+            <li>
+              <Link to="/phishing-identification">
+                Phishing Identification Assessment
+              </Link>
+            </li>
+            <li>
+              <Link to="/training">Training</Link>
+            </li>
+          </ul>
+        </nav>
+      </section>
 
       <section id="scanner">
         <h2>Analyze a URL</h2>
