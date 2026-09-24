@@ -23,6 +23,85 @@ function getErrorDetails(error, fallback) {
   };
 }
 
+function getFindings(analysis) {
+  if (!Array.isArray(analysis?.findings)) {
+    return [];
+  }
+
+  return analysis.findings.filter(
+    (finding) =>
+      finding &&
+      typeof finding === "object" &&
+      typeof finding.type === "string" &&
+      typeof finding.title === "string" &&
+      typeof finding.explanation === "string" &&
+      Number.isFinite(finding.scoreContribution)
+  );
+}
+
+function getResultFindingsMessage(analysis) {
+  if (!Array.isArray(analysis?.findings)) {
+    return "Structured findings are not available for this result.";
+  }
+
+  if (analysis.findings.length === 0) {
+    return "No findings were returned. No suspicious characteristics covered by the current heuristic checks were detected.";
+  }
+
+  return "No valid structured findings are available for this result.";
+}
+
+function getHistoryFindingsMessage(analysis) {
+  if (!Array.isArray(analysis?.findings)) {
+    return "Structured findings are not available for this legacy analysis.";
+  }
+
+  if (analysis.findings.length === 0) {
+    return "No structured findings were returned. Some legacy indicators may not have explanations.";
+  }
+
+  return "No valid structured findings are available for this analysis.";
+}
+
+function getRiskContext(risk) {
+  switch (risk) {
+    case "low":
+      return "Few or none of the characteristics covered by PhishGuard's current heuristic checks were detected.";
+    case "medium":
+      return "Some characteristics detected by PhishGuard warrant additional caution.";
+    case "high":
+      return "Multiple or strongly weighted characteristics detected by PhishGuard warrant additional caution.";
+    default:
+      return "This assessment reflects the characteristics covered by PhishGuard's current heuristic checks.";
+  }
+}
+
+function FindingList({ findings, emptyMessage }) {
+  if (findings.length === 0) {
+    return <p className="findings-empty">{emptyMessage}</p>;
+  }
+
+  return (
+    <ul className="findings-list">
+      {findings.map((finding, index) => (
+        <li
+          className="finding-item"
+          key={`${finding.type || "finding"}-${index}`}
+        >
+          <div className="finding-item-heading">
+            <h4>{finding.title}</h4>
+            <span className="finding-contribution">
+              Score contribution: {finding.scoreContribution}
+            </span>
+          </div>
+
+          <p>{finding.explanation}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function formatDate(value) {
   const date = new Date(value);
 
@@ -560,7 +639,8 @@ function Dashboard() {
         <h2>Analyze a URL</h2>
 
         <p>
-          Enter a suspicious URL to check it for phishing indicators.
+          Enter a URL to review the characteristics covered by PhishGuard's
+          heuristic checks.
         </p>
 
         <form onSubmit={handleAnalyze}>
@@ -582,39 +662,96 @@ function Dashboard() {
       </section>
 
       {result && (
-        <section className="result-section">
-          <h2>Analysis Result</h2>
+        <section
+          className="result-section"
+          aria-labelledby="analysis-result-heading"
+        >
+          <div className="result-section-heading">
+            <div>
+              <h2 id="analysis-result-heading">Analysis Result</h2>
+              <p>
+                Review the characteristics covered by PhishGuard's
+                heuristic checks.
+              </p>
+            </div>
+          </div>
 
-          <p>
-            <strong>URL:</strong> {result.url}
-          </p>
+          <div className="result-summary">
+            <p className="result-url">
+              <strong>URL:</strong> {result.url}
+            </p>
 
-          <p>
-            <strong>Risk:</strong>{" "}
-            <span className={`risk risk-${result.risk}`}>
-              {result.risk.toUpperCase()}
-            </span>
-          </p>
+            <div className="result-metrics">
+              <p>
+                <strong>Risk:</strong>{" "}
+                <span className={`risk risk-${result.risk}`}>
+                  {result.risk.toUpperCase()}
+                </span>
+              </p>
 
-          <p>
-            <strong>Score:</strong> {result.score}
-          </p>
+              <p>
+                <strong>Score:</strong>{" "}
+                <span className="result-score-value">
+                  {result.score}
+                </span>
+              </p>
 
-          <p>
-            <strong>Status:</strong> {result.status}
-          </p>
+              <p>
+                <strong>Status:</strong> {result.status}
+              </p>
+            </div>
+          </div>
 
-          <h3>Detected Indicators</h3>
+          <div className="analysis-context">
+            <p className="analysis-heuristic-note">
+              PhishGuard evaluates URL characteristics with heuristic
+              checks. This result is not definitive proof that a URL is
+              safe, phishing, or malicious.
+            </p>
+            <p className="analysis-risk-context">
+              {getRiskContext(result.risk)}
+            </p>
+          </div>
 
-          {result.indicators.length > 0 ? (
+          <div className="analysis-findings">
+            <h3>Detected findings</h3>
+            <FindingList
+              findings={getFindings(result)}
+              emptyMessage={getResultFindingsMessage(result)}
+            />
+          </div>
+
+          <div className="analysis-indicators">
+            <h3>Detected indicators</h3>
+
+            {result.indicators.length > 0 ? (
+              <ul>
+                {result.indicators.map((indicator) => (
+                  <li key={indicator}>{indicator}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>No suspicious indicators were detected.</p>
+            )}
+          </div>
+
+          <aside
+            className="analysis-guidance"
+            aria-labelledby="analysis-guidance-heading"
+          >
+            <h3 id="analysis-guidance-heading">Defensive guidance</h3>
             <ul>
-              {result.indicators.map((indicator) => (
-                <li key={indicator}>{indicator}</li>
-              ))}
+              <li>Verify the destination independently when uncertain.</li>
+              <li>
+                Avoid entering credentials or sensitive information when a
+                destination appears suspicious.
+              </li>
+              <li>
+                Use a known official website or trusted bookmark when
+                possible.
+              </li>
             </ul>
-          ) : (
-            <p>No suspicious indicators were detected.</p>
-          )}
+          </aside>
         </section>
       )}
 
@@ -641,9 +778,15 @@ function Dashboard() {
           <div className="history-grid">
             {analyses.map((analysis) => {
               const analysisId = analysis._id || analysis.id;
+              const findings = getFindings(analysis);
+              const findingsMessage =
+                getHistoryFindingsMessage(analysis);
 
               return (
-                <article key={analysisId}>
+                <article
+                  className="history-card"
+                  key={analysisId}
+                >
                   <div className="history-card-heading">
                     <h3>{analysis.url}</h3>
 
@@ -657,6 +800,14 @@ function Dashboard() {
                   <p>
                     <strong>Score:</strong> {analysis.score}
                   </p>
+
+                  <div className="history-findings">
+                    <h4>Findings</h4>
+                    <FindingList
+                      findings={findings}
+                      emptyMessage={findingsMessage}
+                    />
+                  </div>
 
                   <div className="status-control">
                     <label htmlFor={`status-${analysisId}`}>

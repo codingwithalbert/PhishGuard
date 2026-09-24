@@ -745,6 +745,166 @@ main:not(:has(.dashboard-header)) > form button {
   border-color: rgba(56, 189, 248, 0.3);
 }
 
+.result-section-heading {
+  margin-bottom: 1.1rem;
+}
+
+.result-section-heading h2 {
+  margin-bottom: 0.35rem;
+}
+
+.result-section-heading p {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--muted);
+}
+
+.result-summary {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(8, 21, 37, 0.72);
+}
+
+.result-url {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.result-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.result-metrics p {
+  margin: 0;
+}
+
+.result-score-value {
+  color: var(--primary);
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-context {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 21, 37, 0.72);
+}
+
+.analysis-context p {
+  margin: 0;
+}
+
+.analysis-heuristic-note {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.analysis-context .analysis-risk-context {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.analysis-findings,
+.analysis-indicators {
+  margin-top: 1.35rem;
+}
+
+.analysis-findings h3,
+.analysis-indicators h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.findings-list {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.finding-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.finding-item-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.finding-item h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.93rem;
+  line-height: 1.4;
+}
+
+.finding-contribution {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.finding-item p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.findings-empty {
+  margin: 0.75rem 0 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 21, 37, 0.6);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.analysis-indicators ul {
+  margin-bottom: 0;
+}
+
+.analysis-guidance {
+  margin-top: 1.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 10px;
+  background: rgba(8, 21, 37, 0.72);
+}
+
+.analysis-guidance h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.analysis-guidance ul {
+  margin: 0.65rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.analysis-guidance li + li {
+  margin-top: 0.4rem;
+}
+
 .risk {
   display: inline-flex;
   align-items: center;
@@ -839,6 +999,51 @@ main:not(:has(.dashboard-header)) > form button {
   font-size: 0.85rem;
 }
 
+.history-card {
+  min-width: 0;
+}
+
+.history-findings {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.history-findings h4 {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.history-findings .findings-list {
+  margin-top: 0;
+}
+
+.history-findings .finding-item {
+  padding: 0.7rem 0;
+}
+
+.history-findings .finding-item-heading {
+  display: block;
+}
+
+.history-findings .finding-contribution {
+  display: block;
+  margin-top: 0.25rem;
+  white-space: normal;
+}
+
+.history-findings .finding-item p {
+  font-size: 0.8rem;
+}
+
+.history-findings .findings-empty {
+  margin-top: 0;
+  padding: 0.7rem 0.75rem;
+}
+
 /* Responsive */
 
 @media (max-width: 720px) {
@@ -903,6 +1108,21 @@ main:not(:has(.dashboard-header)) > form button {
 
   #scanner form button {
     width: 100%;
+  }
+
+  .result-metrics {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .finding-item-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .finding-contribution {
+    white-space: normal;
   }
 
   .history-grid {
