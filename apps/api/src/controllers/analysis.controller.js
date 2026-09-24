@@ -1,6 +1,7 @@
 const {
   analyzeUrl,
-  getAnalysesForUser
+  getAnalysesForUser,
+  toFullAnalysisRepresentation
 } = require("../services/analysis.service");
 const Analysis = require("../models/Analysis");
 
@@ -31,6 +32,7 @@ async function analyze(req, res, next) {
         risk: savedAnalysis.risk,
         score: savedAnalysis.score,
         indicators: savedAnalysis.indicators,
+        findings: result.findings,
         status: savedAnalysis.status,
         createdAt: savedAnalysis.createdAt
       }
@@ -47,7 +49,7 @@ async function getAnalyses(req, res, next) {
     return res.status(200).json({
       success: true,
       count: analyses.length,
-      analyses
+      analyses: analyses.map(toFullAnalysisRepresentation)
     });
   } catch (error) {
     next(error);
@@ -78,7 +80,7 @@ async function updateAnalysis(req, res, next) {
     return res.status(200).json({
       success: true,
       message: "Analysis updated successfully",
-      analysis
+      analysis: toFullAnalysisRepresentation(analysis)
     });
   } catch (error) {
     next(error);

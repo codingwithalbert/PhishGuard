@@ -1,4 +1,9 @@
 const Analysis = require("../models/Analysis");
+const {
+  SUSPICIOUS_KEYWORDS,
+  createFinding,
+  reconstructFindings
+} = require("./analysis.findings");
 
 const DASHBOARD_RECENT_ANALYSIS_LIMIT = 5;
 
@@ -15,20 +20,21 @@ function analyzeUrl(url) {
   }
 
   const indicators = [];
+  const findings = [];
   let score = 0;
 
+  function recordIndicator(indicator, type, scoreContribution) {
+    indicators.push(indicator);
+
+    const finding = createFinding(type, scoreContribution);
+
+    if (finding) {
+      findings.push(finding);
+    }
+  }
+
   // Suspicious keywords
-  const suspiciousKeywords = [
-    "login",
-    "verify",
-    "verification",
-    "secure",
-    "account",
-    "update",
-    "password",
-    "signin",
-    "confirm"
-  ];
+  const suspiciousKeywords = SUSPICIOUS_KEYWORDS;
 
   const urlLower = url.toLowerCase();
 
@@ -37,8 +43,10 @@ function analyzeUrl(url) {
   );
 
   if (matchedKeywords.length > 0) {
-    indicators.push(
-      `Contains suspicious keyword(s): ${matchedKeywords.join(", ")}`
+    recordIndicator(
+      `Contains suspicious keyword(s): ${matchedKeywords.join(", ")}`,
+      "suspicious_keyword",
+      Math.min(matchedKeywords.length * 5, 15)
     );
     score += Math.min(matchedKeywords.length * 5, 15);
   }
@@ -47,37 +55,61 @@ function analyzeUrl(url) {
   const hostnameParts = parsedUrl.hostname.split(".");
 
   if (hostnameParts.length >= 5) {
-    indicators.push("URL contains an unusually large number of subdomains");
+    recordIndicator(
+      "URL contains an unusually large number of subdomains",
+      "excessive_subdomains",
+      15
+    );
     score += 15;
   }
 
   // Punycode domain detection
   if (parsedUrl.hostname.includes("xn--")) {
-    indicators.push("Hostname contains a punycode domain");
+    recordIndicator(
+      "Hostname contains a punycode domain",
+      "punycode",
+      15
+    );
     score += 15;
   }
 
   // Suspicious port detection
   if (parsedUrl.port && !["80", "443"].includes(parsedUrl.port)) {
-    indicators.push(`URL uses a non-standard port: ${parsedUrl.port}`);
+    recordIndicator(
+      `URL uses a non-standard port: ${parsedUrl.port}`,
+      "non_standard_port",
+      15
+    );
     score += 15;
   }
 
   // URL encoding detection
   if (/%[0-9a-fA-F]{2}/.test(url)) {
-    indicators.push("URL contains percent-encoded characters");
+    recordIndicator(
+      "URL contains percent-encoded characters",
+      "percent_encoding",
+      10
+    );
     score += 10;
   }
 
   // Long hostname detection
   if (parsedUrl.hostname.length > 50) {
-    indicators.push("Hostname is unusually long");
+    recordIndicator(
+      "Hostname is unusually long",
+      "long_hostname",
+      10
+    );
     score += 10;
   }
 
   // HTTPS check
   if (parsedUrl.protocol !== "https:") {
-    indicators.push("Connection does not use HTTPS");
+    recordIndicator(
+      "Connection does not use HTTPS",
+      "no_https",
+      20
+    );
     score += 20;
   }
 
@@ -85,19 +117,31 @@ function analyzeUrl(url) {
   const hostname = parsedUrl.hostname;
 
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
-    indicators.push("URL uses an IP address instead of a domain name");
+    recordIndicator(
+      "URL uses an IP address instead of a domain name",
+      "ip_address",
+      25
+    );
     score += 25;
   }
 
   // Suspicious URL length
   if (url.length > 100) {
-    indicators.push("URL is unusually long");
+    recordIndicator(
+      "URL is unusually long",
+      "long_url",
+      10
+    );
     score += 10;
   }
 
   // Suspicious characters
   if (url.includes("@")) {
-    indicators.push("URL contains an @ character");
+    recordIndicator(
+      "URL contains an @ character",
+      "at_character",
+      20
+    );
     score += 20;
   }
 
@@ -115,7 +159,23 @@ function analyzeUrl(url) {
     url,
     risk,
     score,
-    indicators
+    indicators,
+    findings
+  };
+}
+
+function toFullAnalysisRepresentation(analysis) {
+  // Findings are derived for responses so explanation text is not persisted.
+  const representation =
+    analysis && typeof analysis.toObject === "function"
+      ? analysis.toObject()
+      : analysis && typeof analysis.toJSON === "function"
+        ? analysis.toJSON()
+        : { ...analysis };
+
+  return {
+    ...representation,
+    findings: reconstructFindings(representation.indicators)
   };
 }
 
@@ -165,5 +225,6 @@ module.exports = {
   analyzeUrl,
   countAnalysesForUser,
   getAnalysesForUser,
-  getRecentAnalysesForUser
+  getRecentAnalysesForUser,
+  toFullAnalysisRepresentation
 };

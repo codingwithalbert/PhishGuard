@@ -1,5 +1,9 @@
+require("dotenv").config();
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 
 const BASE_URL = "http://localhost:5000";
 
@@ -31,6 +35,23 @@ async function login() {
   authToken = data.token;
 
   return authToken;
+}
+
+function makeTokenForUser(userId) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+
+  return jwt.sign(
+    {
+      userId,
+      role: "user"
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "1h"
+    }
+  );
 }
 
 async function analyze(body, token) {
@@ -81,6 +102,7 @@ test("POST /api/analyze returns low risk for a normal HTTPS URL", async () => {
   assert.equal(data.analysis.risk, "low");
   assert.equal(data.analysis.score, 0);
   assert.deepEqual(data.analysis.indicators, []);
+  assert.deepEqual(data.analysis.findings, []);
   assert.equal(data.analysis.status, "active");
   assert.ok(data.analysis.id);
 });
@@ -103,6 +125,14 @@ test("POST /api/analyze returns high risk for a suspicious URL", async () => {
   assert.equal(data.analysis.risk, "high");
   assert.equal(data.analysis.score, 50);
   assert.equal(data.analysis.indicators.length, 3);
+  assert.equal(data.analysis.findings.length, 3);
+  assert.equal(
+    data.analysis.findings.reduce(
+      (total, finding) => total + finding.scoreContribution,
+      0
+    ),
+    data.analysis.score
+  );
 });
 
 test("POST /api/analyze rejects a missing URL", async () => {
@@ -170,4 +200,118 @@ test("POST /api/analyze rejects unsupported protocols", async () => {
 
   assert.equal(data.success, false);
   assert.equal(data.error, "URL must use HTTP or HTTPS");
+});
+
+test("GET and PATCH expose and preserve findings for stored analyses", async () => {
+  const token = await login();
+  const createResponse = await analyze(
+    {
+      url: "https://history.example/login"
+    },
+    token
+  );
+
+  assert.equal(createResponse.status, 201);
+
+  const createData = await createResponse.json();
+  const analysisId = String(createData.analysis.id);
+  const expectedFinding = {
+    type: "suspicious_keyword",
+    title: "Suspicious keyword(s)",
+    explanation:
+      "Words related to login, verification, or account activity can appear in deceptive URLs, but they can also occur on legitimate websites.",
+    scoreContribution: 5
+  };
+
+  try {
+    const historyResponse = await fetch(`${BASE_URL}/api/analyze`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    assert.equal(historyResponse.status, 200);
+
+    const historyData = await historyResponse.json();
+    const historyAnalysis = historyData.analyses.find(
+      (analysis) => String(analysis._id) === analysisId
+    );
+
+    assert.ok(historyAnalysis);
+    assert.deepEqual(historyAnalysis.indicators, [
+      "Contains suspicious keyword(s): login"
+    ]);
+    assert.deepEqual(historyAnalysis.findings, [expectedFinding]);
+
+    const updateResponse = await fetch(
+      `${BASE_URL}/api/analyze/${analysisId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: "reviewed" })
+      }
+    );
+
+    assert.equal(updateResponse.status, 200);
+
+    const updateData = await updateResponse.json();
+
+    assert.equal(updateData.analysis.status, "reviewed");
+    assert.deepEqual(updateData.analysis.findings, [expectedFinding]);
+
+    const otherUserId = new mongoose.Types.ObjectId().toString();
+    const otherToken = makeTokenForUser(otherUserId);
+    const otherHistoryResponse = await fetch(`${BASE_URL}/api/analyze`, {
+      headers: {
+        Authorization: `Bearer ${otherToken}`
+      }
+    });
+
+    assert.equal(otherHistoryResponse.status, 200);
+
+    const otherHistoryData = await otherHistoryResponse.json();
+
+    assert.equal(
+      otherHistoryData.analyses.some(
+        (analysis) => String(analysis._id) === analysisId
+      ),
+      false
+    );
+
+    const otherUpdateResponse = await fetch(
+      `${BASE_URL}/api/analyze/${analysisId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${otherToken}`
+        },
+        body: JSON.stringify({ status: "archived" })
+      }
+    );
+
+    assert.equal(otherUpdateResponse.status, 404);
+
+    const otherDeleteResponse = await fetch(
+      `${BASE_URL}/api/analyze/${analysisId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${otherToken}`
+        }
+      }
+    );
+
+    assert.equal(otherDeleteResponse.status, 403);
+  } finally {
+    await fetch(`${BASE_URL}/api/analyze/${analysisId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+  }
 });
