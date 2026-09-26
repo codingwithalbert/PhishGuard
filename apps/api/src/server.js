@@ -13,6 +13,7 @@ const phishingIdentificationRoutes = require("./routes/phishingIdentification.ro
 const progressRoutes = require("./routes/progress.routes");
 const trainingRoutes = require("./routes/training.routes");
 const reportingRoutes = require("./routes/reporting.routes");
+const researchRoutes = require("./routes/research.routes");
 const errorHandler = require("./middleware/error.middleware");
 
 const app = express();
@@ -55,6 +56,7 @@ app.use("/api/phishing-identification", phishingIdentificationRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/training", trainingRoutes);
 app.use("/api/reports", reportingRoutes);
+app.use("/api/research", researchRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
