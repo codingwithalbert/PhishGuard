@@ -34,6 +34,22 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+
+    // Password Reset V1 server-controlled reset state.
+    // Only the token hash is stored; the raw token is never persisted.
+    // Both fields are excluded from default queries so reset state can
+    // never leak through a normal User response.
+    passwordResetTokenHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    passwordResetExpiresAt: {
+      type: Date,
+      default: null,
+      select: false
     }
   },
   {
