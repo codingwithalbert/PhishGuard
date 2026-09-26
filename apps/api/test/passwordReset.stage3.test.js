@@ -870,18 +870,7 @@ test("a successful reset logs a safe PASSWORD_RESET_COMPLETED event", async () =
   }
 });
 
-test("production wiring exposes reset-password only and keeps existing auth routes", async () => {
-  const productionPasswordResetPaths = passwordResetRoutes.stack
-    .filter((layer) => layer.route)
-    .map(
-      (layer) =>
-        `${Object.keys(layer.route.methods).join(",")} ${layer.route.path}`
-    );
-
-  assert.deepEqual(productionPasswordResetPaths, [
-    "post /reset-password"
-  ]);
-
+test("existing auth routes are unchanged by the password-reset wiring", () => {
   const authRoutePaths = authRoutes.stack
     .filter((layer) => layer.route)
     .map((layer) => layer.route.path);
@@ -894,48 +883,6 @@ test("production wiring exposes reset-password only and keeps existing auth rout
     "/admin-test"
   ]);
 });
-
-test("forgot-password is not registered in production wiring", async () => {
-  const productionApp = express();
-  productionApp.use(express.json({ limit: "1mb" }));
-  productionApp.use("/api/auth", authRoutes);
-  productionApp.use(errorHandler);
-
-  const productionServer = http.createServer(productionApp);
-
-  await new Promise((resolve) => {
-    productionServer.listen(0, "127.0.0.1", resolve);
-  });
-
-  try {
-    const productionBaseUrl = `http://127.0.0.1:${productionServer.address().port}`;
-    const response = await fetch(
-      `${productionBaseUrl}/api/auth/forgot-password`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email: EXISTING_EMAIL })
-      }
-    );
-
-    const text = await response.text();
-
-    assert.equal(response.status, 404);
-    assert.equal(
-      text.includes(GENERIC_FORGOT_PASSWORD_MESSAGE),
-      false
-    );
-    assert.equal(text.includes(RESET_TOKEN), false);
-    assertNoSensitiveData(text);
-  } finally {
-    await new Promise((resolve) => {
-      productionServer.close(resolve);
-    });
-  }
-});
-
 test("existing register, login, me, and RBAC behavior is unchanged", async () => {
   const userToken = jwt.sign(
     {

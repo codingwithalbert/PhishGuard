@@ -4,6 +4,9 @@ const {
   createPasswordResetController
 } = require("../controllers/passwordReset.controller");
 const {
+  forgotPasswordWorkflow: productionForgotPasswordWorkflow
+} = require("../services/passwordReset.workflow");
+const {
   forgotPasswordLimiter
 } = require("../middleware/rateLimit.middleware");
 const {
@@ -16,7 +19,7 @@ const {
 // Neither endpoint requires authentication.
 function createPasswordResetRouter({
   service,
-  forgotPasswordWorkflow = null,
+  forgotPasswordWorkflow = productionForgotPasswordWorkflow,
   forgotPasswordRateLimiter = forgotPasswordLimiter
 } = {}) {
   const router = express.Router();
@@ -25,17 +28,16 @@ function createPasswordResetRouter({
     forgotPasswordWorkflow
   });
 
-  // reset-password is fully functional in Stage 3: it needs no mail delivery.
   router.post(
     "/reset-password",
     validateResetPasswordRequest,
     controller.resetPassword
   );
 
-  // forgot-password is intentionally NOT registered here. Stage 3 has no
-  // transactional mail sender, and wiring it now would create reset state
-  // whose raw token is never delivered (spec 8). Stage 4 supplies the mail
-  // workflow, and the route below then appears with the dedicated limiter.
+  // Spec 7 and 11: dedicated limiter, strict validation, then the controller.
+  // The default workflow prepares reset state and delivers the Brevo email. An
+  // explicit `forgotPasswordWorkflow: null` removes the route instead of
+  // exposing an endpoint that cannot deliver a reset link.
   if (typeof forgotPasswordWorkflow === "function") {
     router.post(
       "/forgot-password",
@@ -48,7 +50,7 @@ function createPasswordResetRouter({
   return router;
 }
 
-// Production wiring registers /reset-password only.
+// Production wiring registers both password-reset endpoints.
 const router = createPasswordResetRouter();
 
 module.exports = router;
