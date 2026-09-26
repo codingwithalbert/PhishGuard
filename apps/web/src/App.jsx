@@ -20,6 +20,7 @@ import ReviewReportDetail from "./pages/ReviewReportDetail";
 import AwarenessAssessment from "./pages/AwarenessAssessment";
 import PhishingIdentificationAssessment from "./pages/PhishingIdentificationAssessment";
 import Training from "./pages/Training";
+import ResearchAnalytics from "./pages/ResearchAnalytics";
 
 function App() {
   return (
@@ -123,6 +124,17 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["staff", "admin"]}>
               <ReviewReportDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Research Analytics V1: admin only. Backend authorization is the
+            security boundary; this gate is a usability control. */}
+        <Route
+          path="/research"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ResearchAnalytics />
             </ProtectedRoute>
           }
         />

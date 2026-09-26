@@ -2752,6 +2752,244 @@ main:not(:has(.dashboard-header)) > form button {
   line-height: 1.5;
 }
 
+/* Research Analytics V1 */
+
+.research-page {
+  width: min(1050px, calc(100% - 2rem));
+}
+
+.research-intro {
+  margin-bottom: 1.5rem;
+}
+
+.research-intro-note {
+  max-width: 75ch;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.research-panel {
+  margin-bottom: 1.25rem;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.research-panel h2 {
+  margin-bottom: 0.4rem;
+}
+
+.research-panel-note {
+  max-width: 75ch;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.research-loading-panel,
+.research-error-panel,
+.research-empty-state,
+.research-partial-state {
+  margin-bottom: 1.25rem;
+}
+
+.research-loading-panel .awareness-skeleton {
+  max-width: 620px;
+}
+
+.research-error-panel,
+.research-export-error {
+  border-color: rgba(251, 113, 133, 0.4);
+  background: rgba(13, 27, 45, 0.92);
+}
+
+.research-error-panel p,
+.research-empty-state p,
+.research-partial-state p,
+.research-export-error p {
+  color: var(--muted);
+}
+
+.research-error-panel button {
+  background: transparent;
+  color: var(--primary);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.research-error-panel button:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--primary);
+}
+
+.research-cohort-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.research-cohort-grid > div {
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 21, 37, 0.72);
+}
+
+.research-cohort-grid dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.research-cohort-grid dd {
+  margin: 0.4rem 0 0;
+  color: var(--primary);
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.research-statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.research-stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.research-table-caption {
+  margin-bottom: 0.6rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.research-stat-table th,
+.research-stat-table td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.research-stat-table thead th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.research-stat-table tbody th {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.research-stat-table td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.research-boundary-note {
+  max-width: 80ch;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.research-methodology-list,
+.research-privacy-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.research-methodology-list > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.research-methodology-list > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.research-methodology-list dt {
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.research-methodology-list dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.research-privacy-list {
+  padding-left: 1.15rem;
+}
+
+.research-privacy-list li {
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.research-export-panel button {
+  min-width: 170px;
+}
+
+.research-export-error {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  border-radius: 8px;
+  background: rgba(251, 113, 133, 0.08);
+  color: #fda4af;
+}
+
+.research-export-error p {
+  margin: 0 0 0.5rem;
+}
+
+.research-export-error p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 860px) {
+  .research-statistics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .research-methodology-list > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .research-page {
+    width: min(100% - 1.25rem, 1050px);
+  }
+
+  .research-cohort-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .research-export-panel button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 860px) {
   .review-action-grid {
     grid-template-columns: 1fr;

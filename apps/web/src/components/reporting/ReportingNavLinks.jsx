@@ -23,10 +23,15 @@ function ReportingNavLinks() {
   const canViewReview =
     role === "staff" || role === "admin";
 
+  // Admin-only research link. The backend enforces authorization; the role
+  // check here is a usability control only.
+  const canViewResearch = role === "admin";
+
   return (
     <>
       <Link to="/reports">Reports</Link>
       {canViewReview && <Link to="/review">IT Review</Link>}
+      {canViewResearch && <Link to="/research">Research</Link>}
     </>
   );
 }

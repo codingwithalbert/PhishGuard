@@ -75,6 +75,96 @@ export function resetPassword(token, password) {
   });
 }
 
+// Research Analytics V1: aggregate research analytics. Admin only; the backend
+// enforces authorization. This endpoint returns aggregate values only and never
+// returns participant-level records.
+export function getResearchAnalytics() {
+  return request("/api/research/analytics", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+const RESEARCH_CSV_FALLBACK_FILENAME =
+  "phishguard-research-data.csv";
+
+// Only plain filename characters survive, so a server-provided name can never
+// introduce path separators into the download attribute.
+function resolveCsvFilename(contentDisposition) {
+  if (typeof contentDisposition !== "string") {
+    return RESEARCH_CSV_FALLBACK_FILENAME;
+  }
+
+  const encoded = /filename\*\s*=\s*[^']*'[^']*'([^;]+)/i.exec(
+    contentDisposition
+  );
+  const plain = /filename\s*=\s*"([^"]*)"/i.exec(contentDisposition);
+  const candidate = (encoded?.[1] ?? plain?.[1] ?? "").trim();
+  const safeName = candidate.replace(/[^\w.\- ]+/g, "_").trim();
+
+  return safeName.length > 0
+    ? safeName
+    : RESEARCH_CSV_FALLBACK_FILENAME;
+}
+
+// The CSV endpoint is not JSON, so it bypasses request() instead of being
+// forced through a JSON parser. The response is only read as a download blob:
+// it is never parsed, logged, displayed, or stored.
+async function requestResearchCsv() {
+  const response = await fetch(`${API_URL}/api/research/export.csv`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeaders(),
+      Accept: "text/csv"
+    }
+  });
+
+  if (!response.ok) {
+    const error = new Error("The research export could not be downloaded.");
+    error.status = response.status;
+
+    try {
+      const data = await response.json();
+
+      if (typeof data?.error === "string" && data.error.length > 0) {
+        error.message = data.error;
+      }
+    } catch {
+      // A non-JSON error body is ignored; the safe default message stands.
+    }
+
+    throw error;
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: resolveCsvFilename(
+      response.headers.get("content-disposition")
+    )
+  };
+}
+
+export async function downloadResearchCsv() {
+  const { blob, filename } = await requestResearchCsv();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  try {
+    link.href = objectUrl;
+    link.download = filename;
+    link.rel = "noopener";
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  return { filename };
+}
+
 // Only client-facing 4xx messages produced by the API are surfaced. Network
 // failures, unexpected response bodies, and server errors fall back to the
 // caller's safe message so internal details are never displayed.
