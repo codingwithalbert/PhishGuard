@@ -18,6 +18,7 @@ const {
 const {
   authorizeRoles
 } = require("../middleware/role.middleware");
+const passwordResetRoutes = require("./passwordReset.routes");
 
 const router = express.Router();
 
@@ -48,5 +49,10 @@ router.get(
     });
   }
 );
+
+// Password Reset V1: POST /api/auth/reset-password (validation -> controller).
+// POST /api/auth/forgot-password is deliberately absent until the Stage 4
+// transactional mail workflow exists.
+router.use(passwordResetRoutes);
 
 module.exports = router;
