@@ -44,14 +44,18 @@ const RESET_TOKEN_HASH = "d".repeat(64);
 const NEW_PASSWORD = "new-Password-2";
 const USER_ID = new mongoose.Types.ObjectId();
 
-const MAIL_CONFIG = {
+// Environment-shaped configuration, as the workflow receives it.
+const MAIL_ENV = {
   [MAIL_ENV_NAMES.apiKey]: TEST_API_KEY,
   [MAIL_ENV_NAMES.fromEmail]: TEST_FROM_EMAIL,
   [MAIL_ENV_NAMES.fromName]: "PhishGuard"
 };
 
+// Resolved configuration, as the mail service requires it.
+const RESOLVED_MAIL_CONFIG = resolveMailConfig(MAIL_ENV);
+
 const WORKFLOW_ENV = {
-  ...MAIL_CONFIG,
+  ...MAIL_ENV,
   CLIENT_URL: TEST_CLIENT_URL
 };
 
@@ -225,7 +229,7 @@ test("the reset email is sent to Brevo with the documented contract", async () =
   const result = await sendPasswordResetEmail({
     recipient: EXISTING_EMAIL,
     resetUrl: resetUrl(),
-    config: MAIL_CONFIG,
+    config: RESOLVED_MAIL_CONFIG,
     fetchImpl
   });
 
@@ -260,29 +264,30 @@ test("the reset email is sent to Brevo with the documented contract", async () =
     "Reset your PhishGuard password"
   );
 
-  assert.equal(typeof payload.htmlContent, "string");
+  // Exactly one body field is sent, matching the accepted Brevo request.
   assert.equal(typeof payload.textContent, "string");
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(payload, "htmlContent"),
+    false
+  );
+  assert.deepEqual(
+    Object.keys(payload).sort(),
+    ["sender", "subject", "textContent", "to"]
+  );
 
-  for (const content of [
-    payload.htmlContent,
-    payload.textContent
-  ]) {
-    assert.ok(content.includes("PhishGuard"));
-    assert.ok(content.includes(resetUrl()));
-    assert.ok(content.includes("15 minutes"));
-    assert.ok(content.includes("only be used once"));
-    assert.ok(content.toLowerCase().includes("ignore this email"));
-    assert.equal(
-      /password (has been|was) (changed|updated|reset)/i.test(
-        content
-      ),
-      false
-    );
-    assert.equal(content.includes("<img"), false);
-    assert.equal(content.includes("http://"), false);
-  }
+  const content = payload.textContent;
 
-  assert.equal(payload.htmlContent.includes("&lt;"), false);
+  assert.ok(content.includes("PhishGuard"));
+  assert.ok(content.includes(resetUrl()));
+  assert.ok(content.includes("15 minutes"));
+  assert.ok(content.includes("only be used once"));
+  assert.ok(content.toLowerCase().includes("ignore this email"));
+  assert.equal(
+    /password (has been|was) (changed|updated|reset)/i.test(content),
+    false
+  );
+  assert.equal(content.includes("<"), false);
+  assert.equal(content.includes("http://"), false);
 });
 
 test("the sender name falls back to PhishGuard when unset", async () => {
@@ -292,8 +297,8 @@ test("the sender name falls back to PhishGuard when unset", async () => {
     recipient: EXISTING_EMAIL,
     resetUrl: resetUrl(),
     config: {
-      [MAIL_ENV_NAMES.apiKey]: TEST_API_KEY,
-      [MAIL_ENV_NAMES.fromEmail]: TEST_FROM_EMAIL
+      apiKey: TEST_API_KEY,
+      fromEmail: TEST_FROM_EMAIL
     },
     fetchImpl
   });
@@ -319,7 +324,7 @@ test("only the documented Brevo success status counts as delivered", async () =>
         sendPasswordResetEmail({
           recipient: EXISTING_EMAIL,
           resetUrl: resetUrl(),
-          config: MAIL_CONFIG,
+          config: RESOLVED_MAIL_CONFIG,
           fetchImpl
         }),
       (error) => {
@@ -334,60 +339,64 @@ test("only the documented Brevo success status counts as delivered", async () =>
   }
 });
 
-test("network failures and timeouts are sanitized", async () => {
+test("network failures and timeouts are sanitized and never logged", async () => {
   const rejectingFetch = createFetchStub({ status: "reject" });
 
-  await assert.rejects(
-    () =>
-      sendPasswordResetEmail({
-        recipient: EXISTING_EMAIL,
-        resetUrl: resetUrl(),
-        config: MAIL_CONFIG,
-        fetchImpl: rejectingFetch
-      }),
-    (error) => {
-      assertSanitizedMailError(error);
-      assert.equal(error.code, MAIL_ERROR_CODES.DELIVERY_FAILED);
-      assert.equal(
-        error.message.includes("connection refused"),
-        false
-      );
-      return true;
-    }
-  );
+  const rejectLines = await captureConsole(async () => {
+    await assert.rejects(
+      () =>
+        sendPasswordResetEmail({
+          recipient: EXISTING_EMAIL,
+          resetUrl: resetUrl(),
+          config: RESOLVED_MAIL_CONFIG,
+          fetchImpl: rejectingFetch
+        }),
+      (error) => {
+        assertSanitizedMailError(error);
+        assert.equal(error.code, MAIL_ERROR_CODES.DELIVERY_FAILED);
+        assert.equal(
+          error.message.includes("connection refused"),
+          false
+        );
+        return true;
+      }
+    );
+  });
 
-  await assert.rejects(
-    () =>
-      sendPasswordResetEmail({
-        recipient: EXISTING_EMAIL,
-        resetUrl: resetUrl(),
-        config: MAIL_CONFIG,
-        fetchImpl: async () => undefined
-      }),
-    (error) => {
-      assertSanitizedMailError(error);
-      return true;
-    }
-  );
+  assert.deepEqual(rejectLines, []);
+
+  const missingResponseLines = await captureConsole(async () => {
+    await assert.rejects(
+      () =>
+        sendPasswordResetEmail({
+          recipient: EXISTING_EMAIL,
+          resetUrl: resetUrl(),
+          config: RESOLVED_MAIL_CONFIG,
+          fetchImpl: async () => undefined
+        }),
+      (error) => {
+        assertSanitizedMailError(error);
+        return true;
+      }
+    );
+  });
+
+  assert.deepEqual(missingResponseLines, []);
 });
-
 test("missing or invalid mail configuration fails safely", async () => {
-  const invalidConfigs = [
+  // The send boundary accepts only resolved configuration.
+  const invalidResolvedConfigs = [
+    undefined,
     {},
-    { [MAIL_ENV_NAMES.apiKey]: "" },
-    { [MAIL_ENV_NAMES.fromEmail]: TEST_FROM_EMAIL },
-    { [MAIL_ENV_NAMES.apiKey]: TEST_API_KEY },
-    {
-      [MAIL_ENV_NAMES.apiKey]: TEST_API_KEY,
-      [MAIL_ENV_NAMES.fromEmail]: "not-an-email"
-    },
-    {
-      [MAIL_ENV_NAMES.apiKey]: "   ",
-      [MAIL_ENV_NAMES.fromEmail]: TEST_FROM_EMAIL
-    }
+    { apiKey: "", fromEmail: TEST_FROM_EMAIL },
+    { apiKey: TEST_API_KEY },
+    { fromEmail: TEST_FROM_EMAIL },
+    { apiKey: TEST_API_KEY, fromEmail: "not-an-email" },
+    { apiKey: "   ", fromEmail: TEST_FROM_EMAIL },
+    { apiKey: TEST_API_KEY, fromEmail: `${"a".repeat(250)}@example.invalid` }
   ];
 
-  for (const config of invalidConfigs) {
+  for (const config of invalidResolvedConfigs) {
     const fetchImpl = createFetchStub();
 
     await assert.rejects(
@@ -412,17 +421,140 @@ test("missing or invalid mail configuration fails safely", async () => {
     );
   }
 
-  assert.throws(
-    () => resolveMailConfig({}),
+  // An environment-shaped object is not accepted at the send boundary: the
+  // caller owns the environment lookup.
+  const envShapedFetch = createFetchStub();
+
+  await assert.rejects(
+    () =>
+      sendPasswordResetEmail({
+        recipient: EXISTING_EMAIL,
+        resetUrl: resetUrl(),
+        config: MAIL_ENV,
+        fetchImpl: envShapedFetch
+      }),
     (error) => {
       assertSanitizedMailError(error);
+      assert.equal(error.code, MAIL_ERROR_CODES.NOT_CONFIGURED);
       return true;
     }
   );
 
+  assert.equal(envShapedFetch.calls.length, 0);
+
+  // The environment boundary rejects the same misconfigurations.
+  const invalidEnvironments = [
+    {},
+    { [MAIL_ENV_NAMES.apiKey]: "" },
+    { [MAIL_ENV_NAMES.fromEmail]: TEST_FROM_EMAIL },
+    { [MAIL_ENV_NAMES.apiKey]: TEST_API_KEY },
+    {
+      [MAIL_ENV_NAMES.apiKey]: TEST_API_KEY,
+      [MAIL_ENV_NAMES.fromEmail]: "not-an-email"
+    },
+    {
+      [MAIL_ENV_NAMES.apiKey]: "   ",
+      [MAIL_ENV_NAMES.fromEmail]: TEST_FROM_EMAIL
+    }
+  ];
+
+  for (const env of invalidEnvironments) {
+    assert.throws(
+      () => resolveMailConfig(env),
+      (error) => {
+        assertSanitizedMailError(error);
+        assert.equal(error.code, MAIL_ERROR_CODES.NOT_CONFIGURED);
+        return true;
+      }
+    );
+  }
+
+  assert.deepEqual(RESOLVED_MAIL_CONFIG, {
+    apiKey: TEST_API_KEY,
+    fromEmail: TEST_FROM_EMAIL,
+    fromName: "PhishGuard"
+  });
+
   assert.equal(MAIL_ENV_NAMES.apiKey, "BREVO_API_KEY");
   assert.equal(MAIL_ENV_NAMES.fromEmail, "MAIL_FROM_EMAIL");
   assert.equal(MAIL_ENV_NAMES.fromName, "MAIL_FROM_NAME");
+});
+
+test("the workflow resolves the environment once and sends the resolved config", async () => {
+  const fetchImpl = createFetchStub();
+  const clearCalls = [];
+  let capturedConfig = null;
+  const prepared = createPreparedAccount();
+
+  // Production composition, with only the transport injected.
+  const workflow = createForgotPasswordWorkflow({
+    env: WORKFLOW_ENV,
+    prepareReset: async () => prepared,
+    clearResetStateIfCurrent: async (input) => {
+      clearCalls.push(input);
+      return true;
+    },
+    resolveConfig: (env) => resolveMailConfig(env),
+    sendMail: async (input) => {
+      capturedConfig = input.config;
+      return sendPasswordResetEmail({
+        ...input,
+        fetchImpl
+      });
+    }
+  });
+
+  const result = await workflow({ email: EXISTING_EMAIL });
+
+  assert.equal(result, null);
+
+  // The resolved object crosses the boundary unchanged, and it is not an
+  // environment-shaped object that would need a second lookup.
+  assert.deepEqual(capturedConfig, {
+    apiKey: TEST_API_KEY,
+    fromEmail: TEST_FROM_EMAIL,
+    fromName: "PhishGuard"
+  });
+  assert.deepEqual(Object.keys(capturedConfig).sort(), [
+    "apiKey",
+    "fromEmail",
+    "fromName"
+  ]);
+  assert.equal(MAIL_ENV_NAMES.apiKey in capturedConfig, false);
+
+  // The request therefore reaches the provider with the exact contract.
+  assert.equal(fetchImpl.calls.length, 1);
+
+  const [call] = fetchImpl.calls;
+
+  assert.equal(call.url, BREVO_SMTP_EMAIL_ENDPOINT);
+  assert.equal(call.options.method, "POST");
+  assert.equal(call.options.headers["api-key"], TEST_API_KEY);
+  assert.equal(call.options.headers.accept, "application/json");
+  assert.equal(
+    call.options.headers["content-type"],
+    "application/json"
+  );
+
+  const payload = JSON.parse(call.options.body);
+
+  assert.deepEqual(payload.sender, {
+    name: "PhishGuard",
+    email: TEST_FROM_EMAIL
+  });
+  assert.deepEqual(payload.to, [{ email: EXISTING_EMAIL }]);
+  assert.equal(
+    payload.subject,
+    "Reset your PhishGuard password"
+  );
+  assert.ok(payload.textContent.includes(resetUrl()));
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(payload, "htmlContent"),
+    false
+  );
+
+  // A delivered link leaves its reset state active.
+  assert.equal(clearCalls.length, 0);
 });
 
 test("the mail service never logs payloads, keys, recipients, or URLs", async () => {
@@ -430,26 +562,75 @@ test("the mail service never logs payloads, keys, recipients, or URLs", async ()
     await sendPasswordResetEmail({
       recipient: EXISTING_EMAIL,
       resetUrl: resetUrl(),
-      config: MAIL_CONFIG,
+      config: RESOLVED_MAIL_CONFIG,
       fetchImpl: createFetchStub()
     });
   });
 
   assert.deepEqual(successLines, []);
 
+  const providerBody = {
+    code: "unauthorized",
+    message: "Key not found for recipient",
+    recipient: EXISTING_EMAIL
+  };
+
   const failureLines = await captureConsole(async () => {
     await sendPasswordResetEmail({
       recipient: EXISTING_EMAIL,
       resetUrl: resetUrl(),
-      config: MAIL_CONFIG,
+      config: RESOLVED_MAIL_CONFIG,
       fetchImpl: createFetchStub({
-        status: 500,
-        body: { message: "internal provider detail" }
+        status: 400,
+        body: providerBody
       })
     }).catch(() => undefined);
   });
 
+  // A rejected send logs nothing at all: no status, no provider content, and no
+  // secret, recipient, reset link, token, or configuration value.
   assert.deepEqual(failureLines, []);
+
+  for (const line of failureLines) {
+    assertNoSensitiveData(line, "Log line");
+    assert.equal(line.includes("unauthorized"), false);
+    assert.equal(line.includes("Key not found"), false);
+    assert.equal(line.includes("api-key"), false);
+  }
+});
+
+test("configuration failures are sanitized and never logged", async () => {
+  const lines = await captureConsole(async () => {
+    await assert.rejects(
+      () =>
+        sendPasswordResetEmail({
+          recipient: EXISTING_EMAIL,
+          resetUrl: resetUrl(),
+          config: { apiKey: "", fromEmail: TEST_FROM_EMAIL },
+          fetchImpl: createFetchStub()
+        }),
+      (error) => {
+        assertSanitizedMailError(error);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      () =>
+        sendPasswordResetEmail({
+          recipient: EXISTING_EMAIL,
+          resetUrl: resetUrl(),
+          config: MAIL_ENV,
+          fetchImpl: createFetchStub()
+        }),
+      (error) => {
+        assertSanitizedMailError(error);
+        return true;
+      }
+    );
+  });
+
+  assert.deepEqual(lines, []);
 });
 
 test("the reset URL is built safely from CLIENT_URL and the raw token", () => {

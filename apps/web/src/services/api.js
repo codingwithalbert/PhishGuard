@@ -51,6 +51,48 @@ export function loginUser(email, password) {
   });
 }
 
+// Password reset requests are unauthenticated, so no Authorization header is
+// sent. Only the documented field is submitted.
+export function requestPasswordReset(email) {
+  return request("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({
+      email
+    })
+  });
+}
+
+// `confirmPassword` is a client-side concern and is never sent. The raw reset
+// token is only used to build this request body and is never stored, logged, or
+// displayed by the app.
+export function resetPassword(token, password) {
+  return request("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      token,
+      password
+    })
+  });
+}
+
+// Only client-facing 4xx messages produced by the API are surfaced. Network
+// failures, unexpected response bodies, and server errors fall back to the
+// caller's safe message so internal details are never displayed.
+export function toSafeErrorMessage(error, fallback) {
+  if (
+    error &&
+    typeof error.status === "number" &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    typeof error.message === "string" &&
+    error.message.trim().length > 0
+  ) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export function analyzeUrl(url) {
   return request("/api/analyze", {
     method: "POST",

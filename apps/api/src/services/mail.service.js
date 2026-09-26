@@ -61,18 +61,32 @@ function readEnvValue(env, name) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-// Mail configuration is validated at this boundary only, so unrelated
-// development and test environments are not required to define mail settings.
+// The single configuration boundary: environment-shaped input in, validated
+// resolved configuration out. Callers resolve once and pass the result onward,
+// so the environment is never interpreted twice. Validation stays here so
+// unrelated development and test environments are not required to define mail
+// settings.
 function resolveMailConfig(env = process.env) {
   const apiKey = readEnvValue(env, MAIL_ENV_NAMES.apiKey);
   const fromEmail = readEnvValue(env, MAIL_ENV_NAMES.fromEmail);
   const fromName = readEnvValue(env, MAIL_ENV_NAMES.fromName);
 
-  if (apiKey.length === 0) {
-    throw notConfigured();
-  }
+  return assertResolvedMailConfig({ apiKey, fromEmail, fromName });
+}
+
+// Guards the resolved-configuration contract at the send boundary: the caller
+// must hand over the object produced by resolveMailConfig, never a
+// process.env-shaped object.
+function assertResolvedMailConfig(config) {
+  const apiKey =
+    typeof config?.apiKey === "string" ? config.apiKey.trim() : "";
+  const fromEmail =
+    typeof config?.fromEmail === "string" ? config.fromEmail.trim() : "";
+  const fromName =
+    typeof config?.fromName === "string" ? config.fromName.trim() : "";
 
   if (
+    apiKey.length === 0 ||
     fromEmail.length === 0 ||
     fromEmail.length > MAX_RECIPIENT_LENGTH ||
     !EMAIL_SHAPE_PATTERN.test(fromEmail)
@@ -87,40 +101,15 @@ function resolveMailConfig(env = process.env) {
   };
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .split("&")
-    .join("&amp;")
-    .split("<")
-    .join("&lt;")
-    .split(">")
-    .join("&gt;")
-    .split('"')
-    .join("&quot;")
-    .split("'")
-    .join("&#39;");
-}
-
-function buildPasswordResetEmailBody(resetUrl) {
-  const safeUrl = escapeHtml(resetUrl);
+// The Brevo transactional send endpoint is used with a single body field. A
+// direct diagnostic request that carried only `textContent` was accepted with
+// HTTP 201, while a request carrying both `htmlContent` and `textContent` was
+// rejected before any transactional log entry existed, so only the plain-text
+// body is sent.
+function buildPasswordResetEmailText(resetUrl) {
   const expiryMinutes = RESET_TOKEN_TTL_MINUTES;
 
-  const htmlContent = [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<body>",
-    '<h2 style="font-family:Arial,Helvetica,sans-serif;">PhishGuard password reset</h2>',
-    "<p>A password reset was requested for your PhishGuard account.</p>",
-    `<p><a href="${safeUrl}" style="font-family:Arial,Helvetica,sans-serif;">Choose a new password</a></p>`,
-    `<p>Or paste this link into your browser:<br><a href="${safeUrl}">${safeUrl}</a></p>`,
-    `<p>This link expires in ${expiryMinutes} minutes and can only be used once.</p>`,
-    "<p>If you did not request a PhishGuard password reset, you can ignore this email. Your current password stays unchanged until you complete a reset.</p>",
-    '<p style="color:#616e7c;font-size:12px;">Automated message from PhishGuard. Please do not reply.</p>',
-    "</body>",
-    "</html>"
-  ].join("");
-
-  const textContent = [
+  return [
     "PhishGuard password reset",
     "",
     "A password reset was requested for your PhishGuard account.",
@@ -133,8 +122,6 @@ function buildPasswordResetEmailBody(resetUrl) {
     "",
     "Automated message from PhishGuard. Please do not reply."
   ].join("\n");
-
-  return { htmlContent, textContent };
 }
 
 function assertSendInput({ recipient, resetUrl }) {
@@ -155,13 +142,16 @@ function assertSendInput({ recipient, resetUrl }) {
   }
 }
 
-// Only the documented Brevo success status counts as delivered. The provider
+// `config` is the resolved configuration produced by resolveMailConfig. The
+// caller owns the environment lookup, so the environment is read exactly once
+// and a resolved object is never reinterpreted as process.env here. Only the
+// documented Brevo success status counts as delivered, and the provider
 // response body is intentionally not read, so provider data can never reach a
 // caller, a log line, or an HTTP response.
 async function sendPasswordResetEmail({
   recipient,
   resetUrl,
-  config = process.env,
+  config,
   fetchImpl = globalThis.fetch,
   timeoutMs = MAIL_REQUEST_TIMEOUT_MS
 } = {}) {
@@ -171,9 +161,9 @@ async function sendPasswordResetEmail({
     throw notConfigured();
   }
 
-  const { apiKey, fromEmail, fromName } = resolveMailConfig(config);
-  const { htmlContent, textContent } =
-    buildPasswordResetEmailBody(resetUrl);
+  const { apiKey, fromEmail, fromName } =
+    assertResolvedMailConfig(config);
+  const textContent = buildPasswordResetEmailText(resetUrl);
 
   let response;
 
@@ -192,7 +182,6 @@ async function sendPasswordResetEmail({
         },
         to: [{ email: recipient }],
         subject: PASSWORD_RESET_EMAIL_SUBJECT,
-        htmlContent,
         textContent
       }),
       signal:
@@ -219,7 +208,8 @@ module.exports = {
   MAIL_REQUEST_TIMEOUT_MS,
   MailServiceError,
   PASSWORD_RESET_EMAIL_SUBJECT,
-  buildPasswordResetEmailBody,
+  assertResolvedMailConfig,
+  buildPasswordResetEmailText,
   resolveMailConfig,
   sendPasswordResetEmail
 };

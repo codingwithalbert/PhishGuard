@@ -75,6 +75,10 @@ function Login() {
           />
         </div>
 
+        <p className="auth-form-meta">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
+
         <button type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Login"}
         </button>
