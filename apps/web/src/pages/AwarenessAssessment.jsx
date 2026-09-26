@@ -5,6 +5,7 @@ import {
   useState
 } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
 import {
   getAwarenessQuestions,
   getLatestAwarenessAssessment,
@@ -236,6 +237,7 @@ function AwarenessAssessment() {
         >
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/progress">Progress</Link>
+          <ReportingNavLinks />
           <button type="button" onClick={handleLogout}>
             Logout
           </button>

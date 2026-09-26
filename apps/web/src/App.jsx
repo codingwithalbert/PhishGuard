@@ -10,6 +10,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Progress from "./pages/Progress";
+import Reports from "./pages/Reports";
+import ReportCreate from "./pages/ReportCreate";
+import ReportDetail from "./pages/ReportDetail";
+import ReviewQueue from "./pages/ReviewQueue";
+import ReviewReportDetail from "./pages/ReviewReportDetail";
 import AwarenessAssessment from "./pages/AwarenessAssessment";
 import PhishingIdentificationAssessment from "./pages/PhishingIdentificationAssessment";
 import Training from "./pages/Training";
@@ -64,6 +69,51 @@ function App() {
           element={
             <ProtectedRoute>
               <Training />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports/new/:analysisId"
+          element={
+            <ProtectedRoute>
+              <ReportCreate />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports/:reportId"
+          element={
+            <ProtectedRoute>
+              <ReportDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/review"
+          element={
+            <ProtectedRoute allowedRoles={["staff", "admin"]}>
+              <ReviewQueue />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/review/:reportId"
+          element={
+            <ProtectedRoute allowedRoles={["staff", "admin"]}>
+              <ReviewReportDetail />
             </ProtectedRoute>
           }
         />

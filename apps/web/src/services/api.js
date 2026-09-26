@@ -170,3 +170,175 @@ export function completeTrainingModule(moduleId) {
     }
   );
 }
+
+function appendOptionalText(body, field, value) {
+  if (value === undefined || value === null) {
+    return body;
+  }
+
+  if (typeof value !== "string") {
+    body[field] = value;
+    return body;
+  }
+
+  const normalizedValue = value.trim();
+
+  if (normalizedValue.length > 0) {
+    body[field] = normalizedValue;
+  }
+
+  return body;
+}
+
+export function createReport({ analysisId, reason, details } = {}) {
+  const body = { analysisId, reason };
+
+  appendOptionalText(body, "details", details);
+
+  return request("/api/reports", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body)
+  });
+}
+
+export function getOwnReports() {
+  return request("/api/reports", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getOwnReport(reportId) {
+  return request(`/api/reports/${encodeURIComponent(reportId)}`, {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getOwnReportMessages(reportId) {
+  return request(
+    `/api/reports/${encodeURIComponent(reportId)}/messages`,
+    {
+      method: "GET",
+      headers: getAuthHeaders()
+    }
+  );
+}
+
+export function createOwnReportMessage({ reportId, message } = {}) {
+  return request(
+    `/api/reports/${encodeURIComponent(reportId)}/messages`,
+    {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ message })
+    }
+  );
+}
+
+export function getReviewQueue() {
+  return request("/api/reports/review", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getAssignmentCandidates() {
+  return request("/api/reports/review/assignees", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+export function getReviewReport(reportId) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}`,
+    {
+      method: "GET",
+      headers: getAuthHeaders()
+    }
+  );
+}
+
+export function getReviewReportMessages(reportId) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/messages`,
+    {
+      method: "GET",
+      headers: getAuthHeaders()
+    }
+  );
+}
+
+export function createReviewReportMessage({ reportId, message } = {}) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/messages`,
+    {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ message })
+    }
+  );
+}
+
+export function claimReviewReport(reportId) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/claim`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders()
+    }
+  );
+}
+
+export function assignReviewReport({ reportId, assignedTo } = {}) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/assignment`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ assignedTo })
+    }
+  );
+}
+
+export function updateReviewReportPriority({ reportId, priority } = {}) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/priority`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ priority })
+    }
+  );
+}
+
+export function startReviewReport(reportId) {
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/start`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders()
+    }
+  );
+}
+
+export function completeReviewReport({
+  reportId,
+  assessment,
+  reviewerNote
+} = {}) {
+  const body = { assessment };
+
+  appendOptionalText(body, "reviewerNote", reviewerNote);
+
+  return request(
+    `/api/reports/review/${encodeURIComponent(reportId)}/complete`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body)
+    }
+  );
+}

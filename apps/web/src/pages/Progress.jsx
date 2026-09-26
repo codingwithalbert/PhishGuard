@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
 import { getProgress } from "../services/api";
 
 function isAssessmentAttempt(attempt, totalKey) {
@@ -469,6 +470,7 @@ function ProgressPage() {
         >
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/progress">Progress</Link>
+          <ReportingNavLinks />
           <button type="button" onClick={handleLogout}>
             Logout
           </button>

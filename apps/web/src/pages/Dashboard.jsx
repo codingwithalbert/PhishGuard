@@ -4,11 +4,17 @@ import {
   useState
 } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AnalysisFindings from "../components/AnalysisFindings";
+import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import {
+  getValidFindings as getFindings
+} from "../components/reporting/reportingUi";
 import {
   analyzeUrl,
   deleteAnalysis,
   getAnalyses,
   getDashboardSummary,
+  getOwnReports,
   updateAnalysis
 } from "../services/api";
 
@@ -21,22 +27,6 @@ function getErrorDetails(error, fallback) {
     message: error?.message || fallback,
     status: error?.status
   };
-}
-
-function getFindings(analysis) {
-  if (!Array.isArray(analysis?.findings)) {
-    return [];
-  }
-
-  return analysis.findings.filter(
-    (finding) =>
-      finding &&
-      typeof finding === "object" &&
-      typeof finding.type === "string" &&
-      typeof finding.title === "string" &&
-      typeof finding.explanation === "string" &&
-      Number.isFinite(finding.scoreContribution)
-  );
 }
 
 function getResultFindingsMessage(analysis) {
@@ -74,32 +64,6 @@ function getRiskContext(risk) {
     default:
       return "This assessment reflects the characteristics covered by PhishGuard's current heuristic checks.";
   }
-}
-
-function FindingList({ findings, emptyMessage }) {
-  if (findings.length === 0) {
-    return <p className="findings-empty">{emptyMessage}</p>;
-  }
-
-  return (
-    <ul className="findings-list">
-      {findings.map((finding, index) => (
-        <li
-          className="finding-item"
-          key={`${finding.type || "finding"}-${index}`}
-        >
-          <div className="finding-item-heading">
-            <h4>{finding.title}</h4>
-            <span className="finding-contribution">
-              Score contribution: {finding.scoreContribution}
-            </span>
-          </div>
-
-          <p>{finding.explanation}</p>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 function formatDate(value) {
@@ -161,6 +125,7 @@ function Dashboard() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState(null);
   const [analyses, setAnalyses] = useState([]);
+  const [ownReports, setOwnReports] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -217,6 +182,22 @@ function Dashboard() {
     }
 
     loadHistory();
+  }, []);
+
+  useEffect(() => {
+    async function loadExistingReports() {
+      try {
+        const data = await getOwnReports();
+
+        if (Array.isArray(data?.reports)) {
+          setOwnReports(data.reports);
+        }
+      } catch {
+        // Reporting actions remain available if this convenience lookup fails.
+      }
+    }
+
+    loadExistingReports();
   }, []);
 
   function handleLogout() {
@@ -317,6 +298,16 @@ function Dashboard() {
     summary?.latestPhishingIdentificationAssessment;
   const trainingProgress = summary?.trainingProgress;
   const urlAnalyses = summary?.urlAnalyses;
+  const reportedReportsByAnalysisId = new Map(
+    ownReports
+      .filter(
+        (report) =>
+          report &&
+          typeof report.id === "string" &&
+          typeof report.analysisId === "string"
+      )
+      .map((report) => [String(report.analysisId), report])
+  );
 
   return (
     <main>
@@ -342,6 +333,7 @@ function Dashboard() {
           <Link to="/phishing-identification">Phishing Identification</Link>
           <Link to="/training">Training</Link>
           <Link to="/progress">Progress</Link>
+          <ReportingNavLinks />
 
           <span className="user-role">
             {user?.role || "user"}
@@ -715,7 +707,7 @@ function Dashboard() {
 
           <div className="analysis-findings">
             <h3>Detected findings</h3>
-            <FindingList
+            <AnalysisFindings
               findings={getFindings(result)}
               emptyMessage={getResultFindingsMessage(result)}
             />
@@ -781,6 +773,8 @@ function Dashboard() {
               const findings = getFindings(analysis);
               const findingsMessage =
                 getHistoryFindingsMessage(analysis);
+              const existingReport =
+                reportedReportsByAnalysisId.get(String(analysisId));
 
               return (
                 <article
@@ -803,7 +797,7 @@ function Dashboard() {
 
                   <div className="history-findings">
                     <h4>Findings</h4>
-                    <FindingList
+                    <AnalysisFindings
                       findings={findings}
                       emptyMessage={findingsMessage}
                     />
@@ -836,6 +830,24 @@ function Dashboard() {
                       analysis.createdAt
                     ).toLocaleString()}
                   </p>
+
+                  <div className="history-report-actions">
+                    {existingReport ? (
+                      <Link
+                        className="history-report-action"
+                        to={`/reports/${encodeURIComponent(existingReport.id)}`}
+                      >
+                        View Report
+                      </Link>
+                    ) : (
+                      <Link
+                        className="history-report-action"
+                        to={`/reports/new/${encodeURIComponent(analysisId)}`}
+                      >
+                        Report to IT
+                      </Link>
+                    )}
+                  </div>
 
                   <button
                     type="button"
