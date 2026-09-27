@@ -5,6 +5,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import AnalysisFindings from "../components/AnalysisFindings";
+import PageHeader from "../components/PageHeader";
 import {
   getValidFindings as getFindings
 } from "../components/reporting/reportingUi";
@@ -278,26 +279,19 @@ function Dashboard() {
 
       {error && <p role="alert">{error}</p>}
 
+      <PageHeader
+        title="Dashboard"
+        description="Review your learning status, analyze a suspicious URL, and check your analysis history."
+      />
+
       <section
-        className="dashboard-overview"
-        aria-labelledby="dashboard-overview-heading"
+        className="dashboard-status"
+        aria-label="Your progress"
         aria-busy={summaryLoading}
       >
-        <div className="dashboard-overview-heading">
-          <div>
-            <h2 id="dashboard-overview-heading">Welcome to your dashboard</h2>
-            <p>
-              Review your latest assessment results, training progress, and
-              recent URL analysis activity.
-            </p>
-          </div>
-
-          <span className="dashboard-overview-label">Activity overview</span>
-        </div>
-
         {summaryLoading ? (
           <div
-            className="dashboard-overview-loading"
+            className="dashboard-status-loading"
             role="status"
             aria-live="polite"
           >
@@ -309,7 +303,7 @@ function Dashboard() {
             <p className="awareness-status">Loading dashboard summary...</p>
           </div>
         ) : summaryError ? (
-          <div className="dashboard-overview-error" role="alert">
+          <div className="dashboard-status-error" role="alert">
             <p>{summaryError.message}</p>
 
             {isSessionError(summaryError) ? (
@@ -323,235 +317,137 @@ function Dashboard() {
             )}
           </div>
         ) : summary ? (
-          <>
-            <div className="dashboard-assessment-grid">
-              <div className="dashboard-summary-card">
-                <div className="dashboard-summary-card-heading">
-                  <h3>Awareness Assessment</h3>
-                  <span
-                    className={`dashboard-summary-status ${
-                      latestAwarenessAssessment !== null
-                        ? "dashboard-summary-status-completed"
-                        : "dashboard-summary-status-pending"
-                    }`}
-                  >
-                    {latestAwarenessAssessment !== null
-                      ? "Completed"
-                      : "Not yet completed"}
+          <div className="dashboard-status-grid">
+            <div className="dashboard-status-item">
+              <span className="dashboard-status-label">
+                Awareness Assessment
+              </span>
+
+              {latestAwarenessAssessment !== null ? (
+                <>
+                  <span className="dashboard-status-value">
+                    {latestAwarenessAssessment.score}
+                    <span className="dashboard-status-value-total">
+                      {" "}/ {latestAwarenessAssessment.totalQuestions}
+                    </span>
                   </span>
-                </div>
-
-                {latestAwarenessAssessment !== null ? (
-                  <>
-                    <p className="dashboard-summary-score">
-                      <span>Score</span>
-                      <strong>
-                        {latestAwarenessAssessment.score}
-                      </strong>
-                    </p>
-                    <p className="dashboard-summary-detail">
-                      {latestAwarenessAssessment.totalQuestions} questions
-                      completed
-                    </p>
-                    <p className="dashboard-summary-detail">
-                      Completed{" "}
-                      <time dateTime={latestAwarenessAssessment.completedAt}>
-                        {formatDate(latestAwarenessAssessment.completedAt)}
-                      </time>
-                    </p>
-                  </>
-                ) : (
-                  <p className="dashboard-summary-empty">
-                    No completed Awareness Assessment yet.
-                  </p>
-                )}
-
-                <Link
-                  className="dashboard-card-action"
-                  to="/awareness"
-                >
-                  Open Awareness Assessment
-                </Link>
-              </div>
-
-              <div className="dashboard-summary-card">
-                <div className="dashboard-summary-card-heading">
-                  <h3>Phishing Identification Assessment</h3>
-                  <span
-                    className={`dashboard-summary-status ${
-                      latestPhishingIdentificationAssessment !== null
-                        ? "dashboard-summary-status-completed"
-                        : "dashboard-summary-status-pending"
-                    }`}
-                  >
-                    {latestPhishingIdentificationAssessment !== null
-                      ? "Completed"
-                      : "Not yet completed"}
+                  <span className="dashboard-status-meta">
+                    Completed{" "}
+                    <time dateTime={latestAwarenessAssessment.completedAt}>
+                      {formatDate(latestAwarenessAssessment.completedAt)}
+                    </time>
                   </span>
-                </div>
+                </>
+              ) : (
+                <span className="dashboard-status-value dashboard-status-value-pending">
+                  Not yet completed
+                </span>
+              )}
 
-                {latestPhishingIdentificationAssessment !== null ? (
-                  <>
-                    <p className="dashboard-summary-score">
-                      <span>Score</span>
-                      <strong>
-                        {latestPhishingIdentificationAssessment.score}
-                      </strong>
-                    </p>
-                    <p className="dashboard-summary-detail">
-                      {
-                        latestPhishingIdentificationAssessment.totalScenarios
-                      }{" "}
-                      scenarios completed
-                    </p>
-                    <p className="dashboard-summary-detail">
-                      Completed{" "}
-                      <time
-                        dateTime={
-                          latestPhishingIdentificationAssessment.completedAt
-                        }
-                      >
-                        {formatDate(
-                          latestPhishingIdentificationAssessment.completedAt
-                        )}
-                      </time>
-                    </p>
-                  </>
-                ) : (
-                  <p className="dashboard-summary-empty">
-                    No completed Phishing Identification Assessment yet.
-                  </p>
-                )}
-
-                <Link
-                  className="dashboard-card-action"
-                  to="/phishing-identification"
-                >
-                  Open Phishing Identification Assessment
-                </Link>
-              </div>
-            </div>
-
-            <div className="dashboard-overview-lower-grid">
-              <div className="dashboard-summary-card">
-                <div className="dashboard-summary-card-heading">
-                  <h3>Training</h3>
-                  <span className="dashboard-summary-status">
-                    Module completion
-                  </span>
-                </div>
-
-                <div className="dashboard-training-stats">
-                  <div>
-                    <span>Completed modules</span>
-                    <strong>
-                      {trainingProgress.completedModules}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Total modules</span>
-                    <strong>{trainingProgress.totalModules}</strong>
-                  </div>
-                  <div>
-                    <span>Training Exposure</span>
-                    <strong>
-                      {trainingProgress.trainingExposure}%
-                    </strong>
-                  </div>
-                </div>
-
-                <Link className="dashboard-card-action" to="/training">
-                  Open Training
-                </Link>
-              </div>
-
-              <div className="dashboard-summary-card dashboard-analysis-summary-card">
-                <div className="dashboard-summary-card-heading">
-                  <h3>URL analyses</h3>
-                  <span className="dashboard-summary-status">
-                    Owned by you
-                  </span>
-                </div>
-
-                <p className="dashboard-analysis-total">
-                  <strong>{urlAnalyses.total}</strong> total URL analyses
-                </p>
-
-                <div className="dashboard-recent-heading">
-                  <h4>Recent analyses</h4>
-                  <span>Up to 5 most recent</span>
-                </div>
-
-                {urlAnalyses.recent.length === 0 ? (
-                  <p className="dashboard-summary-empty">
-                    No URL analyses yet. Use Analyze URL to start your history.
-                  </p>
-                ) : (
-                  <ul className="dashboard-recent-list">
-                    {urlAnalyses.recent.map((analysis) => (
-                      <li
-                        className="dashboard-recent-item"
-                        key={analysis.id}
-                      >
-                        <div className="dashboard-recent-item-top">
-                          <span className="dashboard-recent-url">
-                            {analysis.url}
-                          </span>
-                          <span
-                            className={`risk risk-${analysis.risk}`}
-                          >
-                            {analysis.risk.toUpperCase()}
-                          </span>
-                        </div>
-
-                        <div className="dashboard-recent-item-meta">
-                          <span>Score: {analysis.score}</span>
-                          <time dateTime={analysis.createdAt}>
-                            {formatDate(analysis.createdAt)}
-                          </time>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <a className="dashboard-card-action" href="#history">
-                  Review Analysis History
-                </a>
-              </div>
-            </div>
-          </>
-        ) : null}
-
-        <nav
-          className="dashboard-quick-actions"
-          aria-label="Dashboard quick actions"
-        >
-          <h3>Quick actions</h3>
-
-          <ul>
-            <li>
-              <a href="#scanner">Analyze URL</a>
-            </li>
-            <li>
-              <a href="#history">Review History</a>
-            </li>
-            <li>
-              <Link to="/awareness">Awareness Assessment</Link>
-            </li>
-            <li>
-              <Link to="/phishing-identification">
-                Phishing Identification Assessment
+              <Link className="dashboard-status-link" to="/awareness">
+                Open assessment
               </Link>
-            </li>
-            <li>
-              <Link to="/training">Training</Link>
-            </li>
-          </ul>
-        </nav>
+            </div>
+
+            <div className="dashboard-status-item">
+              <span className="dashboard-status-label">
+                Phishing Identification
+              </span>
+
+              {latestPhishingIdentificationAssessment !== null ? (
+                <>
+                  <span className="dashboard-status-value">
+                    {latestPhishingIdentificationAssessment.score}
+                    <span className="dashboard-status-value-total">
+                      {" "}/ {latestPhishingIdentificationAssessment.totalScenarios}
+                    </span>
+                  </span>
+                  <span className="dashboard-status-meta">
+                    Completed{" "}
+                    <time
+                      dateTime={
+                        latestPhishingIdentificationAssessment.completedAt
+                      }
+                    >
+                      {formatDate(
+                        latestPhishingIdentificationAssessment.completedAt
+                      )}
+                    </time>
+                  </span>
+                </>
+              ) : (
+                <span className="dashboard-status-value dashboard-status-value-pending">
+                  Not yet completed
+                </span>
+              )}
+
+              <Link
+                className="dashboard-status-link"
+                to="/phishing-identification"
+              >
+                Open assessment
+              </Link>
+            </div>
+
+            <div className="dashboard-status-item">
+              <span className="dashboard-status-label">Training</span>
+              <span className="dashboard-status-value">
+                {trainingProgress.completedModules}
+                <span className="dashboard-status-value-total">
+                  {" "}/ {trainingProgress.totalModules} modules
+                </span>
+              </span>
+              <span className="dashboard-status-meta">
+                Training Exposure {trainingProgress.trainingExposure}%
+              </span>
+              <Link className="dashboard-status-link" to="/training">
+                Open training
+              </Link>
+            </div>
+
+            <div className="dashboard-status-item">
+              <span className="dashboard-status-label">URL analyses</span>
+              <span className="dashboard-status-value">
+                {urlAnalyses.total}
+                <span className="dashboard-status-value-total"> total</span>
+              </span>
+
+              {urlAnalyses.recent.length === 0 ? (
+                <span className="dashboard-status-meta">
+                  No URL analyses yet. Use Analyze URL to start your history.
+                </span>
+              ) : (
+                <ul className="dashboard-status-recent">
+                  {urlAnalyses.recent.map((analysis) => (
+                    <li key={analysis.id}>
+                      <span
+                        className={`risk risk-${analysis.risk}`}
+                      >
+                        {analysis.risk.toUpperCase()}
+                      </span>
+                      <span className="dashboard-status-recent-url">
+                        {analysis.url}
+                      </span>
+                      <span className="dashboard-status-recent-meta">
+                        <span>Score {analysis.score}</span>
+                        <time dateTime={analysis.createdAt}>
+                          {formatDate(analysis.createdAt)}
+                        </time>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <a className="dashboard-status-link" href="#history">
+                Review history
+              </a>
+            </div>
+          </div>
+        ) : null}
       </section>
 
-      <section id="scanner">
+      <section id="scanner" className="scanner-section">
         <h2>Analyze a URL</h2>
 
         <p>
@@ -606,12 +502,11 @@ function Dashboard() {
               </p>
 
               <p>
-                <strong>Score:</strong>{" "}
+                <strong>Heuristic score:</strong>{" "}
                 <span className="result-score-value">
                   {result.score}
                 </span>
               </p>
-
             </div>
           </div>
 
@@ -717,8 +612,15 @@ function Dashboard() {
                     </span>
                   </div>
 
-                  <p>
-                    <strong>Score:</strong> {analysis.score}
+                  <p className="history-card-meta">
+                    <span>
+                      <strong>Score:</strong> {analysis.score}
+                    </span>
+                    <time dateTime={analysis.createdAt}>
+                      {new Date(
+                        analysis.createdAt
+                      ).toLocaleString()}
+                    </time>
                   </p>
 
                   <div className="history-findings">
@@ -743,14 +645,7 @@ function Dashboard() {
                     )}
                   </div>
 
-                  <p className="created-date">
-                    <strong>Created:</strong>{" "}
-                    {new Date(
-                      analysis.createdAt
-                    ).toLocaleString()}
-                  </p>
-
-                  <div className="history-report-actions">
+                  <div className="history-card-actions">
                     {existingReport ? (
                       <Link
                         className="history-report-action"
@@ -766,14 +661,14 @@ function Dashboard() {
                         Report to IT
                       </Link>
                     )}
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(analysisId)}
-                  >
-                    Delete
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(analysisId)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </article>
               );
             })}

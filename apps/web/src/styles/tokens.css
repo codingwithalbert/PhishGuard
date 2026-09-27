@@ -39,6 +39,9 @@
   --color-on-accent: #03111c;
   --color-focus: #7dd3fc;
 
+  /* Subtle accent tint for elevating the primary Dashboard action */
+  --color-accent-subtle: rgba(56, 189, 248, 0.06);
+
   /* Status */
   --color-info: #7dd3fc;
   --color-success: #34d399;
