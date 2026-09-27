@@ -270,16 +270,6 @@ export function getProgress() {
   });
 }
 
-export function updateAnalysis(id, status) {
-  return request(`/api/analyze/${id}`, {
-    method: "PATCH",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      status
-    })
-  });
-}
-
 export function deleteAnalysis(id) {
   return request(`/api/analyze/${id}`, {
     method: "DELETE",
