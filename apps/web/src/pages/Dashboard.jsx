@@ -14,8 +14,7 @@ import {
   deleteAnalysis,
   getAnalyses,
   getDashboardSummary,
-  getOwnReports,
-  updateAnalysis
+  getOwnReports
 } from "../services/api";
 
 function isSessionError(error) {
@@ -231,33 +230,6 @@ function Dashboard() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleStatusChange(id, status) {
-    setError("");
-    setMessage("");
-
-    try {
-      const data = await updateAnalysis(id, status);
-
-      setAnalyses((current) =>
-        current.map((analysis) => {
-          const analysisId = analysis._id || analysis.id;
-
-          return analysisId === id
-            ? data.analysis
-            : analysis;
-        })
-      );
-
-      if ((result?._id || result?.id) === id) {
-        setResult(data.analysis);
-      }
-
-      setMessage("Analysis status updated successfully.");
-    } catch (err) {
-      setError(err.message);
     }
   }
 
@@ -581,7 +553,6 @@ function Dashboard() {
 
                         <div className="dashboard-recent-item-meta">
                           <span>Score: {analysis.score}</span>
-                          <span>Status: {analysis.status}</span>
                           <time dateTime={analysis.createdAt}>
                             {formatDate(analysis.createdAt)}
                           </time>
@@ -688,9 +659,6 @@ function Dashboard() {
                 </span>
               </p>
 
-              <p>
-                <strong>Status:</strong> {result.status}
-              </p>
             </div>
           </div>
 
@@ -762,6 +730,11 @@ function Dashboard() {
           </span>
         </div>
 
+        <p className="analysis-heuristic-note history-disclaimer">
+          Historical results are heuristic assessments. They are not
+          definitive proof that a URL is safe, phishing, or malicious.
+        </p>
+
         {historyLoading ? (
           <p>Loading analysis history...</p>
         ) : analyses.length === 0 ? (
@@ -803,25 +776,18 @@ function Dashboard() {
                     />
                   </div>
 
-                  <div className="status-control">
-                    <label htmlFor={`status-${analysisId}`}>
-                      Status
-                    </label>
+                  <div className="history-indicators">
+                    <h4>Indicators</h4>
 
-                    <select
-                      id={`status-${analysisId}`}
-                      value={analysis.status}
-                      onChange={(event) =>
-                        handleStatusChange(
-                          analysisId,
-                          event.target.value
-                        )
-                      }
-                    >
-                      <option value="active">Active</option>
-                      <option value="reviewed">Reviewed</option>
-                      <option value="archived">Archived</option>
-                    </select>
+                    {Array.isArray(analysis.indicators) && analysis.indicators.length > 0 ? (
+                      <ul>
+                        {analysis.indicators.map((indicator) => (
+                          <li key={indicator}>{indicator}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No suspicious indicators were detected.</p>
+                    )}
                   </div>
 
                   <p className="created-date">
