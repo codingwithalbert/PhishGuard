@@ -51,6 +51,13 @@ function notConfigured() {
 function deliveryFailed() {
   return new MailServiceError(
     MAIL_ERROR_CODES.DELIVERY_FAILED,
+    "Transactional email could not be delivered"
+  );
+}
+
+function passwordResetDeliveryFailed() {
+  return new MailServiceError(
+    MAIL_ERROR_CODES.DELIVERY_FAILED,
     "Password reset email could not be delivered"
   );
 }
@@ -142,20 +149,52 @@ function assertSendInput({ recipient, resetUrl }) {
   }
 }
 
+// Validates the inputs owned by the generic transactional send primitive.
+// The recipient must satisfy the existing email-shape policy. Subject and
+// text content must be non-empty strings. These checks are owned by the
+// generic primitive so that every caller enforces the same baseline.
+function assertTransactionalSendInput({ recipient, subject, textContent }) {
+  if (
+    typeof recipient !== "string" ||
+    recipient.length === 0 ||
+    recipient.length > MAX_RECIPIENT_LENGTH ||
+    !EMAIL_SHAPE_PATTERN.test(recipient)
+  ) {
+    throw notConfigured();
+  }
+
+  if (
+    typeof subject !== "string" ||
+    subject.trim().length === 0
+  ) {
+    throw notConfigured();
+  }
+
+  if (
+    typeof textContent !== "string" ||
+    textContent.trim().length === 0
+  ) {
+    throw notConfigured();
+  }
+}
+
+// Generic Brevo transactional send primitive.
+//
 // `config` is the resolved configuration produced by resolveMailConfig. The
 // caller owns the environment lookup, so the environment is read exactly once
 // and a resolved object is never reinterpreted as process.env here. Only the
 // documented Brevo success status counts as delivered, and the provider
 // response body is intentionally not read, so provider data can never reach a
 // caller, a log line, or an HTTP response.
-async function sendPasswordResetEmail({
+async function sendTransactionalEmail({
   recipient,
-  resetUrl,
+  subject,
+  textContent,
   config,
   fetchImpl = globalThis.fetch,
   timeoutMs = MAIL_REQUEST_TIMEOUT_MS
 } = {}) {
-  assertSendInput({ recipient, resetUrl });
+  assertTransactionalSendInput({ recipient, subject, textContent });
 
   if (typeof fetchImpl !== "function") {
     throw notConfigured();
@@ -163,7 +202,6 @@ async function sendPasswordResetEmail({
 
   const { apiKey, fromEmail, fromName } =
     assertResolvedMailConfig(config);
-  const textContent = buildPasswordResetEmailText(resetUrl);
 
   let response;
 
@@ -181,7 +219,7 @@ async function sendPasswordResetEmail({
           email: fromEmail
         },
         to: [{ email: recipient }],
-        subject: PASSWORD_RESET_EMAIL_SUBJECT,
+        subject,
         textContent
       }),
       signal:
@@ -201,6 +239,43 @@ async function sendPasswordResetEmail({
   return { delivered: true };
 }
 
+// Password Reset-specific wrapper around the generic transactional primitive.
+// Preserves the existing public signature, subject, body, Brevo payload,
+// sender, timeout behavior, success return shape, and MailServiceError codes.
+// On delivery failure, re-throws with the pre-refactor Password Reset-specific
+// message so that Password Reset V1 externally observable behavior is unchanged.
+async function sendPasswordResetEmail({
+  recipient,
+  resetUrl,
+  config,
+  fetchImpl = globalThis.fetch,
+  timeoutMs = MAIL_REQUEST_TIMEOUT_MS
+} = {}) {
+  assertSendInput({ recipient, resetUrl });
+
+  const textContent = buildPasswordResetEmailText(resetUrl);
+
+  try {
+    return await sendTransactionalEmail({
+      recipient,
+      subject: PASSWORD_RESET_EMAIL_SUBJECT,
+      textContent,
+      config,
+      fetchImpl,
+      timeoutMs
+    });
+  } catch (error) {
+    if (
+      error instanceof MailServiceError &&
+      error.code === MAIL_ERROR_CODES.DELIVERY_FAILED
+    ) {
+      throw passwordResetDeliveryFailed();
+    }
+
+    throw error;
+  }
+}
+
 module.exports = {
   BREVO_SMTP_EMAIL_ENDPOINT,
   MAIL_ENV_NAMES,
@@ -211,5 +286,6 @@ module.exports = {
   assertResolvedMailConfig,
   buildPasswordResetEmailText,
   resolveMailConfig,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendTransactionalEmail
 };
