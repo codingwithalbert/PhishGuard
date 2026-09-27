@@ -4,8 +4,8 @@ import {
   useRef,
   useState
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import {
   getAwarenessQuestions,
   getLatestAwarenessAssessment,
@@ -47,7 +47,6 @@ function formatCompletedAt(value) {
 }
 
 function AwarenessAssessment() {
-  const navigate = useNavigate();
   const questionRefs = useRef({});
   const resultHeadingRef = useRef(null);
 
@@ -153,13 +152,6 @@ function AwarenessAssessment() {
     }));
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   function focusQuestion(questionId) {
     questionRefs.current[questionId]?.querySelector("input")?.focus();
   }
@@ -218,40 +210,17 @@ function AwarenessAssessment() {
   }
 
   return (
-    <main className="awareness-page">
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Cybersecurity Awareness</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Awareness navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro">
-        <h1 className="awareness-page-title">Awareness Assessment</h1>
-        <p>
-          Complete this educational assessment to receive a backend-calculated
-          Awareness Score. Your selected answers are evaluated by PhishGuard
-          after submission.
-        </p>
-      </section>
+    <main className="awareness-page" id="main-content">
+      <PageHeader
+        title="Awareness Assessment"
+        description={
+          <p>
+            Complete this educational assessment to receive a backend-calculated
+            Awareness Score. Your selected answers are evaluated by PhishGuard
+            after submission.
+          </p>
+        }
+      />
 
       <section
         className={`awareness-result-section ${

@@ -3,9 +3,8 @@ import {
   useEffect,
   useState
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import AnalysisFindings from "../components/AnalysisFindings";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
 import {
   getValidFindings as getFindings
 } from "../components/reporting/reportingUi";
@@ -116,11 +115,6 @@ function isDashboardSummary(data) {
 }
 
 function Dashboard() {
-  const navigate = useNavigate();
-
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
-
   const [url, setUrl] = useState("");
   const [result, setResult] = useState(null);
   const [analyses, setAnalyses] = useState([]);
@@ -199,13 +193,6 @@ function Dashboard() {
     loadExistingReports();
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   async function handleAnalyze(event) {
     event.preventDefault();
 
@@ -282,41 +269,7 @@ function Dashboard() {
   );
 
   return (
-    <main>
-      <header className="dashboard-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Phishing URL Analysis Dashboard</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Dashboard navigation"
-        >
-          <a href="#scanner">Scanner</a>
-          <a href="#history">History</a>
-          <Link to="/awareness">Awareness</Link>
-          <Link to="/phishing-identification">Phishing Identification</Link>
-          <Link to="/training">Training</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-
-          <span className="user-role">
-            {user?.role || "user"}
-          </span>
-
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
+    <main id="main-content">
       {message && (
         <p className="success-message">
           {message}

@@ -1,25 +1,8 @@
-:root {
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  color: #dbeafe;
-  background: #07111f;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-
-  --bg: #07111f;
-  --surface: #0d1b2d;
-  --surface-light: #12243a;
-  --border: #213750;
-  --text: #dbeafe;
-  --muted: #8da2bd;
-  --primary: #38bdf8;
-  --primary-dark: #0284c7;
-  --success: #34d399;
-  --danger: #fb7185;
-  --warning: #fbbf24;
-}
+/* Major UI/UX V1: semantic tokens and application shell.
+   Page-specific styles below keep working through the legacy token
+   aliases defined in tokens.css. */
+@import "./styles/tokens.css";
+@import "./styles/shell.css";
 
 * {
   box-sizing: border-box;
@@ -110,6 +93,23 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 h1,
@@ -247,7 +247,7 @@ main > form ~ p {
 
 /* Authentication pages */
 
-main:not(:has(.dashboard-header)) {
+main.auth-main {
   max-width: 560px;
   min-height: 100vh;
   display: flex;
@@ -255,11 +255,11 @@ main:not(:has(.dashboard-header)) {
   justify-content: center;
 }
 
-main:not(:has(.dashboard-header)) > h1 {
+main.auth-main > h1 {
   margin-bottom: 0.5rem;
 }
 
-main:not(:has(.dashboard-header)) > h1::before {
+main.auth-main > h1::before {
   content: "◈";
   display: block;
   margin-bottom: 0.75rem;
@@ -267,7 +267,7 @@ main:not(:has(.dashboard-header)) > h1::before {
   font-size: 2rem;
 }
 
-main:not(:has(.dashboard-header)) > form {
+main.auth-main > form {
   width: 100%;
   max-width: none;
   margin-top: 2rem;
@@ -277,7 +277,7 @@ main:not(:has(.dashboard-header)) > form {
   background: var(--surface);
 }
 
-main:not(:has(.dashboard-header)) > form button {
+main.auth-main > form button {
   width: 100%;
   margin-top: 0.25rem;
 }
@@ -301,93 +301,6 @@ main:not(:has(.dashboard-header)) > form button {
 }
 
 /* Dashboard header */
-
-.dashboard-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--border);
-  background: rgba(7, 17, 31, 0.92);
-  backdrop-filter: blur(12px);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-}
-
-.brand-mark {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  place-items: center;
-  border: 1px solid rgba(56, 189, 248, 0.5);
-  border-radius: 11px;
-  background: rgba(56, 189, 248, 0.1);
-  color: var(--primary);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 1.4rem;
-  letter-spacing: -0.03em;
-}
-
-.brand p {
-  margin: 0.15rem 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.dashboard-nav {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.dashboard-nav a {
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.dashboard-nav a:hover {
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.user-role {
-  padding: 0.3rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.dashboard-nav button {
-  margin: 0;
-  background: transparent;
-  color: var(--text);
-  border-color: var(--border);
-}
-
-.dashboard-nav button:hover {
-  background: var(--surface-light);
-  border-color: #365572;
-}
 
 /* Dashboard overview */
 
@@ -740,7 +653,7 @@ main:not(:has(.dashboard-header)) > form button {
 
 #scanner,
 #history {
-  scroll-margin-top: 110px;
+  scroll-margin-top: 76px;
 }
 
 #scanner form {
@@ -935,21 +848,21 @@ main:not(:has(.dashboard-header)) > form button {
 }
 
 .risk-low {
-  border: 1px solid rgba(52, 211, 153, 0.35);
-  background: rgba(52, 211, 153, 0.1);
-  color: #6ee7b7;
+  border: 1px solid var(--risk-low-border);
+  background: var(--risk-low-bg);
+  color: var(--risk-low-text);
 }
 
 .risk-medium {
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  background: rgba(251, 191, 36, 0.1);
-  color: #fcd34d;
+  border: 1px solid var(--risk-medium-border);
+  background: var(--risk-medium-bg);
+  color: var(--risk-medium-text);
 }
 
 .risk-high {
-  border: 1px solid rgba(251, 113, 133, 0.4);
-  background: rgba(251, 113, 133, 0.1);
-  color: #fda4af;
+  border: 1px solid var(--risk-high-border);
+  background: var(--risk-high-bg);
+  color: var(--risk-high-text);
 }
 
 /* History */
@@ -1092,21 +1005,6 @@ main:not(:has(.dashboard-header)) > form button {
     padding: 1.1rem;
   }
 
-  .dashboard-header {
-    position: static;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .dashboard-nav {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .dashboard-nav button {
-    margin-left: auto;
-  }
-
   .dashboard-overview-heading,
   .dashboard-summary-card-heading,
   .dashboard-recent-heading,
@@ -1181,32 +1079,10 @@ main:not(:has(.dashboard-header)) > form button {
   width: min(900px, calc(100% - 2rem));
 }
 
-.awareness-header {
-  position: static;
-  background: var(--bg);
-  backdrop-filter: none;
-}
-
-.awareness-intro {
-  margin-bottom: 1.5rem;
-  padding: 0 0 1.25rem;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
 .awareness-page-title {
   margin-bottom: 0.5rem;
   font-size: 2rem;
   letter-spacing: -0.03em;
-}
-
-.awareness-intro p {
-  max-width: 65ch;
-  margin-bottom: 0;
-  color: var(--muted);
 }
 
 .awareness-result-section,
@@ -1440,10 +1316,6 @@ main:not(:has(.dashboard-header)) > form button {
 @media (max-width: 720px) {
   .awareness-page {
     width: min(100% - 1.25rem, 900px);
-  }
-
-  .awareness-intro {
-    padding: 0 0 1rem;
   }
 
   .awareness-page-title {

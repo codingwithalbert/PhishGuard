@@ -4,8 +4,8 @@ import {
   useRef,
   useState
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import {
   getLatestPhishingIdentificationAssessment,
   getPhishingIdentificationScenarios,
@@ -48,7 +48,6 @@ function formatCompletedAt(value) {
 }
 
 function PhishingIdentificationAssessment() {
-  const navigate = useNavigate();
   const scenarioRefs = useRef({});
   const resultHeadingRef = useRef(null);
 
@@ -154,13 +153,6 @@ function PhishingIdentificationAssessment() {
     }));
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   function focusScenario(scenarioId) {
     scenarioRefs.current[scenarioId]?.querySelector("input")?.focus();
   }
@@ -227,43 +219,18 @@ function PhishingIdentificationAssessment() {
   }
 
   return (
-    <main className="awareness-page phishing-assessment-page">
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Phishing Identification</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Phishing identification navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro">
-        <h1 className="awareness-page-title">
-          Phishing Identification Assessment
-        </h1>
-        <p>
-          Review controlled educational scenarios to receive a
-          backend-calculated Phishing Identification Score. This learning
-          activity does not determine whether a real message or website is
-          malicious.
-        </p>
-      </section>
+    <main className="awareness-page phishing-assessment-page" id="main-content">
+      <PageHeader
+        title="Phishing Identification Assessment"
+        description={
+          <p>
+            Review controlled educational scenarios to receive a
+            backend-calculated Phishing Identification Score. This learning
+            activity does not determine whether a real message or website is
+            malicious.
+          </p>
+        }
+      />
 
       <section
         className={`awareness-result-section ${

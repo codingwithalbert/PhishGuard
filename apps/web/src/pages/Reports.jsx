@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import { getOwnReports } from "../services/api";
 import {
   formatReportingDate,
@@ -80,7 +80,6 @@ function getAssignmentText(assignedTo) {
 }
 
 function ReportsPage() {
-  const navigate = useNavigate();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,51 +123,23 @@ function ReportsPage() {
     loadOnMount();
   }, [loadReports]);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   return (
-    <main className="reports-page" aria-busy={loading}>
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Reports</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Reports navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro reports-intro">
-        <h1 className="awareness-page-title">Reports</h1>
-        <p>
-          Review the suspicious-URL reports you submitted to school IT and
-          follow their current review state.
-        </p>
-        <p className="reports-intro-note">
-          Report details, ticket numbers, automated analysis evidence, and IT
-          review information are supplied by the PhishGuard backend.
-        </p>
-      </section>
+    <main className="reports-page" id="main-content" aria-busy={loading}>
+      <PageHeader
+        title="Reports"
+        description={
+          <>
+            <p>
+              Review the suspicious-URL reports you submitted to school IT and
+              follow their current review state.
+            </p>
+            <p className="reports-intro-note">
+              Report details, ticket numbers, automated analysis evidence, and
+              IT review information are supplied by the PhishGuard backend.
+            </p>
+          </>
+        }
+      />
 
       {loading ? (
         <section

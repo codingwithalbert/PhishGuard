@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import {
   changePassword,
   getCurrentProfile,
@@ -440,7 +440,6 @@ function ChangePasswordForm() {
 }
 
 function ProfilePage() {
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -486,51 +485,23 @@ function ProfilePage() {
     updateStoredUserSnapshot(updatedUser);
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   return (
-    <main className="awareness-page profile-page" aria-busy={loading}>
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Profile</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Profile navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro profile-intro">
-        <h1 className="awareness-page-title">Profile</h1>
-        <p>
-          Review your account details, update your display name, or change your
-          password. Account information is always read from the server.
-        </p>
-        <p className="profile-intro-note">
-          You can only manage your own account. Email address and role are
-          read-only.
-        </p>
-      </section>
+    <main className="awareness-page profile-page" id="main-content" aria-busy={loading}>
+      <PageHeader
+        title="Profile"
+        description={
+          <>
+            <p>
+              Review your account details, update your display name, or change
+              your password. Account information is always read from the server.
+            </p>
+            <p className="profile-intro-note">
+              You can only manage your own account. Email address and role are
+              read-only.
+            </p>
+          </>
+        }
+      />
 
       {loading ? (
         <ProfileLoadingState />

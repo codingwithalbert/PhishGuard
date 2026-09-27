@@ -5,6 +5,7 @@ import {
   Routes
 } from "react-router-dom";
 
+import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -39,117 +40,122 @@ function App() {
           element={<ResetPassword />}
         />
 
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+        {/* Authenticated application shell (Major UI/UX V1).
+            ProtectedRoute behavior is unchanged; the shell only provides
+            the shared sidebar, top header, and mobile navigation chrome. */}
+        <Route element={<AppShell />}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/progress"
-          element={
-            <ProtectedRoute>
-              <Progress />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/progress"
+            element={
+              <ProtectedRoute>
+                <Progress />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/awareness"
-          element={
-            <ProtectedRoute>
-              <AwarenessAssessment />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/awareness"
+            element={
+              <ProtectedRoute>
+                <AwarenessAssessment />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/phishing-identification"
-          element={
-            <ProtectedRoute>
-              <PhishingIdentificationAssessment />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/phishing-identification"
+            element={
+              <ProtectedRoute>
+                <PhishingIdentificationAssessment />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/training"
-          element={
-            <ProtectedRoute>
-              <Training />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/training"
+            element={
+              <ProtectedRoute>
+                <Training />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute>
-              <Reports />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/reports/new/:analysisId"
-          element={
-            <ProtectedRoute>
-              <ReportCreate />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/reports/new/:analysisId"
+            element={
+              <ProtectedRoute>
+                <ReportCreate />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/reports/:reportId"
-          element={
-            <ProtectedRoute>
-              <ReportDetail />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/reports/:reportId"
+            element={
+              <ProtectedRoute>
+                <ReportDetail />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/review"
-          element={
-            <ProtectedRoute allowedRoles={["staff", "admin"]}>
-              <ReviewQueue />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/review"
+            element={
+              <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                <ReviewQueue />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/review/:reportId"
-          element={
-            <ProtectedRoute allowedRoles={["staff", "admin"]}>
-              <ReviewReportDetail />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/review/:reportId"
+            element={
+              <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                <ReviewReportDetail />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Profile & Change Password V1: available to every authenticated
-            role. The backend resolves the account from the token. */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
+          {/* Profile & Change Password V1: available to every authenticated
+              role. The backend resolves the account from the token. */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Research Analytics V1: admin only. Backend authorization is the
-            security boundary; this gate is a usability control. */}
-        <Route
-          path="/research"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <ResearchAnalytics />
-            </ProtectedRoute>
-          }
-        />
+          {/* Research Analytics V1: admin only. Backend authorization is the
+              security boundary; this gate is a usability control. */}
+          <Route
+            path="/research"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <ResearchAnalytics />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

@@ -3,8 +3,7 @@ import {
   useEffect,
   useState
 } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link, useParams } from "react-router-dom";
 import ReportEvidence from "../components/reporting/ReportEvidence";
 import ReportMessageThread from "../components/reporting/ReportMessageThread";
 import {
@@ -113,7 +112,6 @@ function getReviewerNoteText(report) {
 }
 
 function ReportDetailPage() {
-  const navigate = useNavigate();
   const { reportId } = useParams();
 
   const [report, setReport] = useState(null);
@@ -249,42 +247,12 @@ function ReportDetailPage() {
     }
   }, [isSending, report]);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   return (
     <main
       className="reports-page report-detail-page"
+      id="main-content"
       aria-busy={loading}
     >
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Report detail</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Report detail navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
 
       {loading ? (
         <section

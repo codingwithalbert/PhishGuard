@@ -52,7 +52,7 @@ function ForgotPassword() {
   }
 
   return (
-    <main>
+    <main className="auth-main">
       <h1>Reset your PhishGuard password</h1>
 
       <p>

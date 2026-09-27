@@ -43,7 +43,7 @@ function Login() {
   }
 
   return (
-    <main>
+    <main className="auth-main">
       <h1>PhishGuard Login</h1>
 
       <p>Sign in to access your phishing analysis dashboard.</p>

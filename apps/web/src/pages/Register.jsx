@@ -51,7 +51,7 @@ function Register() {
   }
 
   return (
-    <main>
+    <main className="auth-main">
       <h1>Create a PhishGuard Account</h1>
 
       <p>

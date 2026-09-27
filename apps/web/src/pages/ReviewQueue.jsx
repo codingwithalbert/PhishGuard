@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import { getReviewQueue } from "../services/api";
 import {
   formatReportingDate,
@@ -101,7 +101,6 @@ function getEvidenceSummary(snapshot) {
 }
 
 function ReviewQueuePage() {
-  const navigate = useNavigate();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -145,51 +144,24 @@ function ReviewQueuePage() {
     loadOnMount();
   }, [loadQueue]);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   return (
-    <main className="reports-page review-page" aria-busy={loading}>
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>IT Report Review</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="IT Review navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro reports-intro">
-        <h1 className="awareness-page-title">IT Review Queue</h1>
-        <p>
-          Review phishing incident reports submitted by PhishGuard users and
-          open a Report for investigation.
-        </p>
-        <p className="reports-intro-note">
-          Queue order, ticket information, automated evidence, workflow state,
-          and reviewer information are supplied by the PhishGuard backend.
-        </p>
-      </section>
+    <main className="reports-page review-page" id="main-content" aria-busy={loading}>
+      <PageHeader
+        title="IT Review Queue"
+        description={
+          <>
+            <p>
+              Review phishing incident reports submitted by PhishGuard users and
+              open a Report for investigation.
+            </p>
+            <p className="reports-intro-note">
+              Queue order, ticket information, automated evidence, workflow
+              state, and reviewer information are supplied by the PhishGuard
+              backend.
+            </p>
+          </>
+        }
+      />
 
       {loading ? (
         <section

@@ -4,8 +4,8 @@ import {
   useRef,
   useState
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import {
   completeTrainingModule,
   getTrainingModules,
@@ -105,7 +105,6 @@ function TrainingErrorState({ error, onRetry, retryLabel = "Try again" }) {
 }
 
 function TrainingPage() {
-  const navigate = useNavigate();
   const completionStatusRef = useRef(null);
 
   const [modules, setModules] = useState([]);
@@ -189,13 +188,6 @@ function TrainingPage() {
     }
   }, [completionMessage]);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   async function handleComplete(module) {
     if (module.completed || pendingModuleId !== null) {
       return;
@@ -255,44 +247,24 @@ function TrainingPage() {
     : null;
 
   return (
-    <main className="awareness-page training-page">
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Training Exposure</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Training navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro">
-        <h1 className="awareness-page-title">Training Exposure</h1>
-        <p>
-          Review PhishGuard&apos;s fixed cybersecurity training modules. Reading
-          or opening a module does not record completion; use the explicit
-          completion action when you are ready to record your participation.
-        </p>
-        <p className="training-intro-note">
-          Training Exposure represents module completion, not proof of
-          cybersecurity competence or learning effectiveness.
-        </p>
-      </section>
+    <main className="awareness-page training-page" id="main-content">
+      <PageHeader
+        title="Training Exposure"
+        description={
+          <>
+            <p>
+              Review PhishGuard&apos;s fixed cybersecurity training modules.
+              Reading or opening a module does not record completion; use the
+              explicit completion action when you are ready to record your
+              participation.
+            </p>
+            <p className="training-intro-note">
+              Training Exposure represents module completion, not proof of
+              cybersecurity competence or learning effectiveness.
+            </p>
+          </>
+        }
+      />
 
       <section
         className="training-progress-section"

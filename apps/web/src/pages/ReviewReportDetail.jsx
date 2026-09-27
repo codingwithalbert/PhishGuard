@@ -5,8 +5,7 @@ import {
   useRef,
   useState
 } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link, useParams } from "react-router-dom";
 import ReportEvidence from "../components/reporting/ReportEvidence";
 import ReportMessageThread from "../components/reporting/ReportMessageThread";
 import {
@@ -212,7 +211,6 @@ function getEffectiveCandidateId(
 }
 
 function ReviewReportDetailPage() {
-  const navigate = useNavigate();
   const { reportId } = useParams();
   const priorityInputId = useId();
   const assigneeInputId = useId();
@@ -692,13 +690,6 @@ function ReviewReportDetailPage() {
     }
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   function renderActionError(targetError) {
     if (!targetError) {
       return null;
@@ -720,32 +711,9 @@ function ReviewReportDetailPage() {
   return (
     <main
       className="reports-page review-page review-detail-page"
+      id="main-content"
       aria-busy={loading}
     >
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>IT Report detail</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="IT Report detail navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
 
       {loading ? (
         <section

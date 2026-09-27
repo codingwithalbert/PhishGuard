@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import PageHeader from "../components/PageHeader";
 import ReportEvidence from "../components/reporting/ReportEvidence";
 import {
   REPORT_REASON_OPTIONS
@@ -211,42 +211,12 @@ function ReportCreatePage() {
     }
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   return (
     <main
       className="reports-page report-create-page"
+      id="main-content"
       aria-busy={loading}
     >
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Report to school IT</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Report creation navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
 
       {loading ? (
         <section
@@ -279,18 +249,22 @@ function ReportCreatePage() {
         </section>
       ) : analysis ? (
         <>
-          <section className="awareness-intro reports-intro">
-            <h1 className="awareness-page-title">Report to school IT</h1>
-            <p>
-              Submit this Analysis and its incident context to school IT for
-              human investigation.
-            </p>
-            <p className="reports-intro-note">
-              The automated URL result is heuristic evidence. Submitting a
-              Report does not confirm that the URL is phishing, malicious, or
-              safe.
-            </p>
-          </section>
+          <PageHeader
+            title="Report to school IT"
+            description={
+              <>
+                <p>
+                  Submit this Analysis and its incident context to school IT for
+                  human investigation.
+                </p>
+                <p className="reports-intro-note">
+                  The automated URL result is heuristic evidence. Submitting a
+                  Report does not confirm that the URL is phishing, malicious,
+                  or safe.
+                </p>
+              </>
+            }
+          />
 
           {existingReport && (
             <section className="report-existing-notice">

@@ -77,7 +77,7 @@ function ResetPassword() {
   }
 
   return (
-    <main>
+    <main className="auth-main">
       <h1>Choose a new PhishGuard password</h1>
 
       <p>

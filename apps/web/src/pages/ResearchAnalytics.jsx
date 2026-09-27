@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import {
   downloadResearchCsv,
   getResearchAnalytics
@@ -255,7 +255,6 @@ function StatisticTable({ title, description, statistics, labelledBy }) {
 }
 
 function ResearchAnalyticsPage() {
-  const navigate = useNavigate();
 
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -298,13 +297,6 @@ function ResearchAnalyticsPage() {
     loadOnMount();
   }, [loadAnalytics]);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   async function handleExport() {
     // Prevents repeated export actions while a download is in progress.
     if (exporting) {
@@ -338,48 +330,28 @@ function ResearchAnalyticsPage() {
         cohort.totalEligibleParticipants);
 
   return (
-    <main className="awareness-page research-page" aria-busy={loading}>
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Research Analytics</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Research analytics navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro research-intro">
-        <h1 className="awareness-page-title">Research Analytics</h1>
-        <p>
-          Descriptive, aggregate research view of the three PhishGuard research
-          variables: Awareness Score, Phishing Identification Score, and Training
-          Exposure. Every value on this page is calculated and returned by the
-          backend; this page does not recalculate or interpret any statistic.
-        </p>
-        <p className="research-intro-note">
-          This view is available to administrators only, and the API enforces
-          that restriction independently of this page. Results are descriptive
-          and exploratory: an observed association does not establish causation,
-          and missing participant measurements reduce the available sample
-          sizes.
-        </p>
-      </section>
+    <main className="awareness-page research-page" id="main-content" aria-busy={loading}>
+      <PageHeader
+        title="Research Analytics"
+        description={
+          <>
+            <p>
+              Descriptive, aggregate research view of the three PhishGuard
+              research variables: Awareness Score, Phishing Identification
+              Score, and Training Exposure. Every value on this page is
+              calculated and returned by the backend; this page does not
+              recalculate or interpret any statistic.
+            </p>
+            <p className="research-intro-note">
+              This view is available to administrators only, and the API
+              enforces that restriction independently of this page. Results are
+              descriptive and exploratory: an observed association does not
+              establish causation, and missing participant measurements reduce
+              the available sample sizes.
+            </p>
+          </>
+        }
+      />
 
       {loading ? (
         <ResearchLoadingState />

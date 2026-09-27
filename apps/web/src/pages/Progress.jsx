@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import ReportingNavLinks from "../components/reporting/ReportingNavLinks";
+import { Link } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 import { getProgress } from "../services/api";
 
 function isAssessmentAttempt(attempt, totalKey) {
@@ -386,7 +386,6 @@ function AssessmentHistory({
 }
 
 function ProgressPage() {
-  const navigate = useNavigate();
 
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -430,13 +429,6 @@ function ProgressPage() {
     loadOnMount();
   }, [loadProgress]);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/login");
-  }
-
   const awareness = progress?.awareness;
   const phishingIdentification = progress?.phishingIdentification;
   const training = progress?.training;
@@ -451,43 +443,23 @@ function ProgressPage() {
     (!hasAwarenessProgress || !hasPhishingProgress || !hasTrainingProgress);
 
   return (
-    <main className="awareness-page progress-page" aria-busy={loading}>
-      <header className="dashboard-header awareness-header">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            PG
-          </div>
-
-          <div>
-            <h1>PhishGuard</h1>
-            <p>Personal Progress</p>
-          </div>
-        </div>
-
-        <nav
-          className="dashboard-nav"
-          aria-label="Progress navigation"
-        >
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/progress">Progress</Link>
-          <ReportingNavLinks />
-          <button type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </nav>
-      </header>
-
-      <section className="awareness-intro progress-intro">
-        <h1 className="awareness-page-title">Personal Progress</h1>
-        <p>
-          Review the latest assessment results, recent attempt history, and
-          recorded training completion status for your PhishGuard account.
-        </p>
-        <p className="progress-intro-note">
-          This page is descriptive and read-only. Scores and Training Exposure
-          come from the backend; this view does not calculate or interpret them.
-        </p>
-      </section>
+    <main className="awareness-page progress-page" id="main-content" aria-busy={loading}>
+      <PageHeader
+        title="Personal Progress"
+        description={
+          <>
+            <p>
+              Review the latest assessment results, recent attempt history, and
+              recorded training completion status for your PhishGuard account.
+            </p>
+            <p className="progress-intro-note">
+              This page is descriptive and read-only. Scores and Training
+              Exposure come from the backend; this view does not calculate or
+              interpret them.
+            </p>
+          </>
+        }
+      />
 
       {loading ? (
         <ProgressLoadingState />
