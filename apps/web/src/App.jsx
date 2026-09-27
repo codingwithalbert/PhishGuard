@@ -21,6 +21,7 @@ import AwarenessAssessment from "./pages/AwarenessAssessment";
 import PhishingIdentificationAssessment from "./pages/PhishingIdentificationAssessment";
 import Training from "./pages/Training";
 import ResearchAnalytics from "./pages/ResearchAnalytics";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -124,6 +125,17 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["staff", "admin"]}>
               <ReviewReportDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Profile & Change Password V1: available to every authenticated
+            role. The backend resolves the account from the token. */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

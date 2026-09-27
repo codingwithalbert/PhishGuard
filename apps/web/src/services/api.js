@@ -75,6 +75,62 @@ export function resetPassword(token, password) {
   });
 }
 
+// Profile & Change Password V1: authoritative account data. The profile is
+// always read from the API; the stored user snapshot is not authoritative.
+export function getCurrentProfile() {
+  return request("/api/auth/me", {
+    method: "GET",
+    headers: getAuthHeaders()
+  });
+}
+
+// Only the editable display name is submitted. Email, role, account id, and
+// every other server-owned field are never part of this request.
+export function updateProfileName(name) {
+  return request("/api/auth/profile", {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      name
+    })
+  });
+}
+
+// The exact error message the frozen contract returns for an incorrect current
+// password. Matched literally so no other 401 is misread as a form error.
+const CURRENT_PASSWORD_INCORRECT_MESSAGE = "Current password is incorrect";
+
+// The confirmation password is a client-side concern and is never sent.
+//
+// The frozen contract answers 401 with the error message
+// "Current password is incorrect" when the submitted current password is wrong.
+// That is a form error rather than a session failure, so it is flagged here to
+// keep the page from treating it as an expired session.
+//
+// Only that exact status-and-message pair is flagged. Any other 401 from this
+// endpoint, such as a missing or unreadable authentication header, keeps the
+// existing session-error behaviour, and so does every 403 and any other status.
+export async function changePassword(currentPassword, newPassword) {
+  try {
+    return await request("/api/auth/change-password", {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        currentPassword,
+        newPassword
+      })
+    });
+  } catch (error) {
+    // Narrow by design: a wrong current password is the only non-session 401
+    // this endpoint produces, and it is identified by its exact message.
+    error.isCurrentPasswordRejection =
+      error?.status === 401 &&
+      error?.message === CURRENT_PASSWORD_INCORRECT_MESSAGE;
+
+    throw error;
+  }
+}
+
 // Research Analytics V1: aggregate research analytics. Admin only; the backend
 // enforces authorization. This endpoint returns aggregate values only and never
 // returns participant-level records.

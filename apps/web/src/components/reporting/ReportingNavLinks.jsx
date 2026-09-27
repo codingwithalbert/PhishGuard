@@ -32,6 +32,8 @@ function ReportingNavLinks() {
       <Link to="/reports">Reports</Link>
       {canViewReview && <Link to="/review">IT Review</Link>}
       {canViewResearch && <Link to="/research">Research</Link>}
+      {/* Self-service account page, available to every authenticated role. */}
+      <Link to="/profile">Profile</Link>
     </>
   );
 }
