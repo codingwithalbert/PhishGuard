@@ -36,6 +36,82 @@ Repository structure:
 Do not replace React, Express, Mongoose, MongoDB, or the existing architecture
 unless explicitly instructed.
 
+## Current Development Phase
+
+- Phase 1 — Final Feature Completion: complete
+- Phase 2 — Feature Freeze & Cleanup: complete
+- Phase 3 — Major UI/UX V1: current
+
+The current `main` branch is the feature-frozen functional baseline.
+
+During Major UI/UX V1, existing product behavior and backend/API contracts
+must remain unchanged unless an explicitly approved task says otherwise.
+
+## Major UI/UX V1 Guardrails
+
+The following rules apply during the Major UI/UX V1 phase:
+
+### Functional Preservation
+
+- UI/UX work must preserve existing functionality.
+- Do not alter backend behavior merely to simplify frontend redesign.
+- Do not change API contracts unless explicitly approved.
+- Do not change URL-analysis heuristics, scores, thresholds, or findings logic.
+- Do not reintroduce the removed Analysis.status frontend controls.
+- Analysis History remains a product feature.
+- Frontend role visibility is UX only; backend authorization remains the
+  security boundary.
+
+### Risk Communication
+
+- Automated URL analysis remains heuristic.
+- LOW risk must not be presented as proof that a URL is safe.
+- HIGH risk must not be presented as proof of phishing/maliciousness.
+- Human IT assessment must remain visually and conceptually distinct from
+  automated heuristic analysis.
+- Report workflow status must remain distinct from Analysis.status.
+
+### Research Analytics
+
+- Research analytics must not imply causation, statistical significance, or
+  predictive validity beyond what the implementation supports.
+
+### Accessibility and States
+
+- Preserve loading, error, empty, disabled, and success states.
+- Design responsive behavior intentionally for desktop and small screens.
+- Preserve or improve semantic HTML, keyboard usability, visible focus states,
+  labels, contrast, and non-color-only status communication.
+- Do not claim formal accessibility/WCAG compliance unless verified.
+
+### Implementation
+
+- Prefer reusable components when actual reuse exists, but avoid abstraction
+  for its own sake.
+- Avoid unnecessary dependencies or UI frameworks.
+- Preserve the existing React/Vite stack.
+
+### Visual Direction
+
+- Professional, trustworthy, modern, calm, security-oriented.
+- Appropriate for a school environment.
+- Approachable for students.
+- Efficient for IT staff/admins.
+
+Avoid:
+
+- Stereotypical hacker-terminal design.
+- Neon/cyberpunk overload.
+- Matrix-style decoration.
+- Excessive glow or gradients.
+- Gaming-dashboard aesthetics, gamification, streaks, rankings, leaderboards,
+  or achievement badges.
+- Decorative cybersecurity clichés.
+
+The installed design skills may help with UI work, but PhishGuard project
+instructions and approved specifications take precedence over generic design
+recommendations.
+
 ## Existing Functionality
 
 Preserve working functionality unless the requested task explicitly changes
@@ -46,12 +122,16 @@ Implemented functionality includes:
 - Registration
 - Login
 - Logout
+- Forgot Password / Reset Password (via Brevo transactional email)
+- Profile management
+- Change Password
 - bcrypt password hashing
 - JWT authentication and expiration
 - User, Staff, and Admin roles
 - Backend role-based authorization
-- URL analysis
-- Analysis history
+- URL analysis (heuristic)
+- Explainable URL Analysis (structured findings with explanations)
+- Analysis History
 - Analysis create/read/update/delete operations
 - User ownership checks
 - Input validation
@@ -65,6 +145,13 @@ Implemented functionality includes:
 - Training modules and Training Exposure tracking
 - Dashboard V1
 - Progress V1
+- Student incident reporting (suspicious-URL reports)
+- Staff/Admin IT report review workflow
+- Report messaging between students and IT staff
+- Human IT assessment and report completion workflow
+- Report Email Notifications (message and completion notifications)
+- Research Analytics (aggregate statistics and correlations)
+- Admin CSV research export (de-identified)
 - Render deployment configuration
 
 Backend Staff/Admin authorization tests and protected endpoints remain part of
@@ -87,17 +174,6 @@ training modules.
 When discussing relationships among research variables, describe statistical
 relationships as associations unless the research design supports a causal
 claim.
-
-Features that may be implemented in later phases include:
-
-- Explainable URL Analysis
-- suspicious-URL Reporting
-- meaningful Staff/Admin report review
-- forgot/reset password and email delivery
-- final UI/UX refinement
-
-A feature listed as planned must not be represented as implemented until its
-code has been completed and verified.
 
 ## URL Analysis
 
@@ -196,17 +272,20 @@ Before changing code:
 
 After backend changes, run the relevant backend tests.
 
-Standard backend verification:
+Standard backend verification (Windows PowerShell):
 
-`cd apps/api && npm test`
+`cd apps/api`
+`npm test`
 
 After frontend changes, run:
 
-`cd apps/web && npm run lint`
+`cd apps/web`
+`npm run lint`
 
 and:
 
-`cd apps/web && npm run build`
+`cd apps/web`
+`npm run build`
 
 For full-stack changes, run both backend and frontend verification.
 
