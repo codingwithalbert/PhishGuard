@@ -14,6 +14,9 @@ const {
   toStudentReportDto,
   toStudentReportMessageDto
 } = require("./reporting.dto");
+const {
+  notifyReportOwner
+} = require("./reportNotification.service");
 
 const UNFINISHED_STATUSES = ["submitted", "under_review"];
 const FINAL_ASSESSMENTS = new Set([
@@ -155,7 +158,10 @@ function resolveDependencies(options = {}) {
     allocateTicketNumber:
       options.allocateTicketNumber ||
       options.ticketAllocator ||
-      allocateTicketNumber
+      allocateTicketNumber,
+    notifyReportOwner:
+      options.notifyReportOwner ||
+      notifyReportOwner
   };
 }
 
@@ -815,6 +821,16 @@ async function createReviewReportMessage(
     message
   });
 
+  try {
+    await deps.notifyReportOwner({
+      reportId,
+      notificationType: "message"
+    });
+  } catch {
+    // Notification is best-effort; contain unexpected throws so they never
+    // affect the successful Reporting operation.
+  }
+
   const populatedMessage = await getPopulatedMessage(
     deps,
     createdMessage
@@ -1021,6 +1037,16 @@ async function completeReviewReport(
     },
     conflictMessage: "Report is already completed"
   });
+
+  try {
+    await deps.notifyReportOwner({
+      reportId,
+      notificationType: "completion"
+    });
+  } catch {
+    // Notification is best-effort; contain unexpected throws so they never
+    // affect the successful Reporting operation.
+  }
 
   return toITReviewReportDto(updatedReport);
 }
