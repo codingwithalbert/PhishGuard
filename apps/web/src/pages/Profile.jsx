@@ -56,10 +56,15 @@ function isSessionError(error) {
   return error?.status === 401 || error?.status === 403;
 }
 
+// Copies only the fields the page renders and classifies. The
+// `isCurrentPasswordRejection` boolean is carried over explicitly because
+// isSessionError() needs it: dropping it would reclassify the frozen-contract
+// 401 as a session error. No other property of the original error is copied.
 function getErrorDetails(error, fallback) {
   return {
     message: error?.message || fallback,
-    status: error?.status
+    status: error?.status,
+    isCurrentPasswordRejection: error?.isCurrentPasswordRejection === true
   };
 }
 
