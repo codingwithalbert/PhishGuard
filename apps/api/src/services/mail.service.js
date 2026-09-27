@@ -149,17 +149,25 @@ function assertSendInput({ recipient, resetUrl }) {
   }
 }
 
+// Shared recipient email-shape policy. Used by the generic transactional
+// primitive and by other services that need to validate a recipient email
+// before sending. This is the single source of truth for recipient email
+// validation across PhishGuard.
+function isValidRecipientEmail(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_RECIPIENT_LENGTH &&
+    EMAIL_SHAPE_PATTERN.test(value)
+  );
+}
+
 // Validates the inputs owned by the generic transactional send primitive.
 // The recipient must satisfy the existing email-shape policy. Subject and
 // text content must be non-empty strings. These checks are owned by the
 // generic primitive so that every caller enforces the same baseline.
 function assertTransactionalSendInput({ recipient, subject, textContent }) {
-  if (
-    typeof recipient !== "string" ||
-    recipient.length === 0 ||
-    recipient.length > MAX_RECIPIENT_LENGTH ||
-    !EMAIL_SHAPE_PATTERN.test(recipient)
-  ) {
+  if (!isValidRecipientEmail(recipient)) {
     throw notConfigured();
   }
 
@@ -285,6 +293,7 @@ module.exports = {
   PASSWORD_RESET_EMAIL_SUBJECT,
   assertResolvedMailConfig,
   buildPasswordResetEmailText,
+  isValidRecipientEmail,
   resolveMailConfig,
   sendPasswordResetEmail,
   sendTransactionalEmail
