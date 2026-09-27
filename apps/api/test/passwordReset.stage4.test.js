@@ -1104,17 +1104,31 @@ test("production routing registers both endpoints in the required order", () => 
 });
 
 test("existing auth routes remain unchanged after Stage 4 wiring", () => {
-  const authRoutePaths = authRoutes.stack
-    .filter((layer) => layer.route)
-    .map((layer) => layer.route.path);
+  // Every original authentication and RBAC route must still be registered with
+  // its original method. Later features may add further routes to this router,
+  // so presence is asserted rather than an exact or positional list.
+  const registeredMethods = new Map(
+    authRoutes.stack
+      .filter((layer) => layer.route)
+      .map((layer) => [
+        layer.route.path,
+        Object.keys(layer.route.methods)
+      ])
+  );
 
-  assert.deepEqual(authRoutePaths, [
-    "/register",
-    "/login",
-    "/me",
-    "/staff-test",
-    "/admin-test"
-  ]);
+  for (const [path, methods] of [
+    ["/register", ["post"]],
+    ["/login", ["post"]],
+    ["/me", ["get"]],
+    ["/staff-test", ["get"]],
+    ["/admin-test", ["get"]]
+  ]) {
+    assert.deepEqual(
+      registeredMethods.get(path),
+      methods,
+      `${path} must remain registered with its original method`
+    );
+  }
 });
 
 test("HTTP contract stays identical for existing, missing, and failed workflows", async () => {
