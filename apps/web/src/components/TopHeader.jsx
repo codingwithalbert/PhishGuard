@@ -28,6 +28,10 @@ function getPageTitle(pathname) {
     return "Progress";
   }
 
+  if (pathname === "/reports") {
+    return "Reports";
+  }
+
   if (pathname.startsWith("/reports/new")) {
     return "Report to school IT";
   }

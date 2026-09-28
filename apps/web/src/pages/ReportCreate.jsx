@@ -282,11 +282,16 @@ function ReportCreatePage() {
           )}
 
           <section className="report-create-section">
+            <h2>Analysis being reported</h2>
+
             <ReportEvidence analysisSnapshot={analysis} />
           </section>
 
           <section className="report-create-section">
             <h2>Report details</h2>
+            <p>
+              Select a reason and add optional context for the IT review team.
+            </p>
 
             <form
               className="report-create-form"

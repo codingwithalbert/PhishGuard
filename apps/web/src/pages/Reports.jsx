@@ -168,20 +168,13 @@ function ReportsPage() {
         <section className="reports-empty-state">
           <h2>No Reports yet</h2>
           <p>
-            Reports you submit from Analysis History will appear here.
+            When you submit a suspicious URL from Analysis History, your report
+            and its ticket number will appear here.
           </p>
         </section>
       ) : (
-        <section
-          className="reports-list-section"
-          aria-labelledby="reports-list-heading"
-        >
-          <div className="section-heading">
-            <div>
-              <h2 id="reports-list-heading">Your Reports</h2>
-              <p>Reports are shown in the order returned by the backend.</p>
-            </div>
-
+        <section className="reports-list-section">
+          <div className="reports-list-heading">
             <span className="report-count">
               {reports.length}{" "}
               {reports.length === 1 ? "report" : "reports"}

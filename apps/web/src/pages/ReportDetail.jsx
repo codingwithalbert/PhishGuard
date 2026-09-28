@@ -331,7 +331,12 @@ function ReportDetailPage() {
           </section>
 
           <section className="report-detail-section">
-            <h2>IT review state</h2>
+            <h2>
+              IT review state
+              <span className="report-section-badge report-section-badge-human">
+                Human IT review
+              </span>
+            </h2>
 
             <dl className="report-detail-grid">
               <div>

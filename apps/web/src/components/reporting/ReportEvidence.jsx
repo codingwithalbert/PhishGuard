@@ -35,7 +35,12 @@ function ReportEvidence({ analysisSnapshot }) {
 
   return (
     <div className="report-evidence">
-      <h3>PhishGuard automated analysis</h3>
+      <h3>
+        PhishGuard automated analysis
+        <span className="report-section-badge report-section-badge-automated">
+          Automated
+        </span>
+      </h3>
 
       <div className="analysis-context">
         <p className="analysis-heuristic-note">
