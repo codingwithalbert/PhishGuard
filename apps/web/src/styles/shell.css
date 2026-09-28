@@ -331,6 +331,13 @@
   border-color: var(--color-border-strong);
 }
 
+/* Ensure SVG icons center cleanly inside their square button containers.
+   Inline SVGs retain a baseline gap that causes visual off-centering. */
+.topbar-menu-button svg,
+.mobile-nav-close svg {
+  display: block;
+}
+
 .mobile-nav-body {
   flex: 1;
   display: flex;
