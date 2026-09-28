@@ -349,12 +349,19 @@ function AssessmentHistory({
         <ol className="progress-history-list">
           {history.map((attempt) => (
             <li className="progress-history-item" key={attempt.id}>
-              <div className="progress-history-score">
-                <span>Score</span>
-                <strong>
-                  {attempt.score}
-                  <span>/100</span>
-                </strong>
+              <div className="progress-history-attempt-heading">
+                <span className="progress-history-attempt-date">
+                  <time dateTime={attempt.completedAt}>
+                    {formatCompletedAt(attempt.completedAt)}
+                  </time>
+                </span>
+                <div className="progress-history-score">
+                  <span>Score</span>
+                  <strong>
+                    {attempt.score}
+                    <span>/100</span>
+                  </strong>
+                </div>
               </div>
 
               <dl className="progress-history-details">
@@ -367,14 +374,6 @@ function AssessmentHistory({
                 <div>
                   <dt>{totalLabel}</dt>
                   <dd>{attempt[totalKey]}</dd>
-                </div>
-                <div>
-                  <dt>Completed</dt>
-                  <dd>
-                    <time dateTime={attempt.completedAt}>
-                      {formatCompletedAt(attempt.completedAt)}
-                    </time>
-                  </dd>
                 </div>
               </dl>
             </li>

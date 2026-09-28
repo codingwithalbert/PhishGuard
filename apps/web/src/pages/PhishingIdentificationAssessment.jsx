@@ -378,13 +378,20 @@ function PhishingIdentificationAssessment() {
                         <span className="question-number">
                           Scenario {scenario.scenarioId}
                         </span>
-                        <span className="phishing-scenario-copy">
-                          {scenario.scenario}
-                        </span>
-                        <span className="phishing-question-prompt">
-                          {scenario.question}
-                        </span>
                       </legend>
+
+                      <div className="phishing-scenario-evidence">
+                        <p className="phishing-scenario-label">
+                          Message to review
+                        </p>
+                        <p className="phishing-scenario-copy">
+                          {scenario.scenario}
+                        </p>
+                      </div>
+
+                      <p className="phishing-question-prompt">
+                        {scenario.question}
+                      </p>
 
                       <div className="awareness-choices">
                         {scenario.choices.map((choice) => {

@@ -400,7 +400,10 @@ function TrainingPage() {
                   key={module.moduleId}
                 >
                   <div className="training-module-header">
-                    <div>
+                    <div className="training-module-header-text">
+                      <span className="training-module-number">
+                        Module {module.moduleId}
+                      </span>
                       <h3>{module.title}</h3>
                       <p className="training-module-objective">
                         {module.learningObjective}
