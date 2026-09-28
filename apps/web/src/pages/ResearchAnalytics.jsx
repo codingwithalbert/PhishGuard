@@ -410,19 +410,23 @@ function ResearchAnalyticsPage() {
           </section>
 
           <div className="research-statistics-grid">
-            <StatisticTable
-              labelledBy="research-awareness-heading"
-              title="Awareness Score"
-              description="Descriptive statistics for the latest completed Awareness Assessment of each eligible participant."
-              statistics={analytics.awareness}
-            />
+            <div className="research-table-scroll">
+              <StatisticTable
+                labelledBy="research-awareness-heading"
+                title="Awareness Score"
+                description="Descriptive statistics for the latest completed Awareness Assessment of each eligible participant."
+                statistics={analytics.awareness}
+              />
+            </div>
 
-            <StatisticTable
-              labelledBy="research-phishing-heading"
-              title="Phishing Identification Score"
-              description="Descriptive statistics for the latest completed Phishing Identification Assessment of each eligible participant."
-              statistics={analytics.phishingIdentification}
-            />
+            <div className="research-table-scroll">
+              <StatisticTable
+                labelledBy="research-phishing-heading"
+                title="Phishing Identification Score"
+                description="Descriptive statistics for the latest completed Phishing Identification Assessment of each eligible participant."
+                statistics={analytics.phishingIdentification}
+              />
+            </div>
           </div>
 
           <section
@@ -439,27 +443,29 @@ function ResearchAnalyticsPage() {
               indicate assessed performance.
             </p>
 
-            <table className="research-stat-table">
-              <caption className="research-table-caption">
-                Training Exposure levels and participant counts
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Training Exposure</th>
-                  <th scope="col">Participants</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analytics.trainingExposureDistribution.map((entry) => (
-                  <tr key={entry.trainingExposure}>
-                    <th scope="row">
-                      {entry.trainingExposure}%
-                    </th>
-                    <td>{entry.count}</td>
+            <div className="research-table-scroll">
+              <table className="research-stat-table">
+                <caption className="research-table-caption">
+                  Training Exposure levels and participant counts
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Training Exposure</th>
+                    <th scope="col">Participants</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {analytics.trainingExposureDistribution.map((entry) => (
+                    <tr key={entry.trainingExposure}>
+                      <th scope="row">
+                        {entry.trainingExposure}%
+                      </th>
+                      <td>{entry.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section
@@ -475,35 +481,37 @@ function ResearchAnalyticsPage() {
               values for both variables.
             </p>
 
-            <table className="research-stat-table">
-              <caption className="research-table-caption">
-                Pairwise Pearson correlation values
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Variables compared</th>
-                  <th scope="col">n</th>
-                  <th scope="col">Pearson r</th>
-                </tr>
-              </thead>
-              <tbody>
-                {RELATIONSHIP_FIELDS.map(([field, label]) => {
-                  const relationship = analytics.relationships[field];
+            <div className="research-table-scroll">
+              <table className="research-stat-table">
+                <caption className="research-table-caption">
+                  Pairwise Pearson correlation values
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Variables compared</th>
+                    <th scope="col">n</th>
+                    <th scope="col">Pearson r</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {RELATIONSHIP_FIELDS.map(([field, label]) => {
+                    const relationship = analytics.relationships[field];
 
-                  return (
-                    <tr key={field}>
-                      <th scope="row">{label}</th>
-                      <td>{relationship.n}</td>
-                      <td>
-                        {relationship.r === null
-                          ? UNAVAILABLE_VALUE
-                          : relationship.r}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr key={field}>
+                        <th scope="row">{label}</th>
+                        <td>{relationship.n}</td>
+                        <td>
+                          {relationship.r === null
+                            ? UNAVAILABLE_VALUE
+                            : relationship.r}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
             <p className="research-boundary-note">
               A dash means the backend could not calculate the coefficient for
@@ -561,10 +569,10 @@ function ResearchAnalyticsPage() {
                 participant-level records.
               </li>
               <li>
-                The CSV export is de-identified. Participants appear only as
-                transient pseudonymous identifiers that are generated for the
-                research dataset, are not permanent account identifiers, and
-                are not authentication identifiers.
+                The CSV export uses pseudonymous participant identifiers.
+                Participants appear only as transient research-dataset
+                identifiers that are generated for the export, are not permanent
+                account identifiers, and are not authentication identifiers.
               </li>
               <li>
                 Removing direct identifiers does not remove the research value
@@ -581,7 +589,7 @@ function ResearchAnalyticsPage() {
           >
             <h2 id="research-export-heading">Dataset export</h2>
             <p className="research-panel-note">
-              Download the de-identified participant-level research dataset as
+              Download the pseudonymous participant-level research dataset as
               CSV. The file is generated by the backend; this page never builds
               participant rows itself.
             </p>

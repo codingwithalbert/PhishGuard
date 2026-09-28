@@ -194,18 +194,8 @@ function ReviewQueuePage() {
           </p>
         </section>
       ) : (
-        <section
-          className="review-queue-section"
-          aria-labelledby="review-queue-heading"
-        >
-          <div className="section-heading">
-            <div>
-              <h2 id="review-queue-heading">Review queue</h2>
-              <p>
-                Reports are shown in the order returned by the backend.
-              </p>
-            </div>
-
+        <section className="review-queue-section">
+          <div className="review-queue-heading">
             <span className="report-count">
               {reports.length}{" "}
               {reports.length === 1 ? "report" : "reports"}
@@ -237,46 +227,19 @@ function ReviewQueuePage() {
                   {report.analysisSnapshot.url}
                 </p>
 
-                <div className="review-card-metrics">
+                <dl className="review-queue-grid">
                   <div>
-                    <span>Automated risk</span>
-                    <strong>
-                      {report.analysisSnapshot.risk
-                        ? report.analysisSnapshot.risk.toUpperCase()
-                        : "Unavailable"}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Automated score</span>
-                    <strong>
-                      {Number.isFinite(report.analysisSnapshot.score)
-                        ? report.analysisSnapshot.score
-                        : "Unavailable"}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>IT Priority</span>
-                    <strong>
+                    <dt>IT Priority</dt>
+                    <dd>
                       {getReportPriorityLabel(report.priority)}
-                    </strong>
+                    </dd>
                   </div>
+
                   <div>
-                    <span>IT Assessment</span>
-                    <strong>
+                    <dt>IT Assessment</dt>
+                    <dd>
                       {getReportAssessmentLabel(report.assessment)}
-                    </strong>
-                  </div>
-                </div>
-
-                <dl className="report-summary-grid review-queue-summary">
-                  <div>
-                    <dt>Reporter</dt>
-                    <dd>{getReporterText(report.reporter)}</dd>
-                  </div>
-
-                  <div>
-                    <dt>Reason</dt>
-                    <dd>{getReportReasonLabel(report.reason)}</dd>
+                    </dd>
                   </div>
 
                   <div>
@@ -299,19 +262,44 @@ function ReviewQueuePage() {
                   </div>
 
                   <div>
-                    <dt>Evidence summary</dt>
-                    <dd>
-                      {getEvidenceSummary(report.analysisSnapshot)}
-                    </dd>
+                    <dt>Reporter</dt>
+                    <dd>{getReporterText(report.reporter)}</dd>
+                  </div>
+
+                  <div>
+                    <dt>Reason</dt>
+                    <dd>{getReportReasonLabel(report.reason)}</dd>
                   </div>
                 </dl>
 
-                <Link
-                  className="report-card-action"
-                  to={`/review/${encodeURIComponent(report.id)}`}
-                >
-                  Open review
-                </Link>
+                <div className="review-queue-evidence">
+                  <span className="review-queue-evidence-label">
+                    Automated
+                  </span>
+                  <span className="review-queue-evidence-risk">
+                    {report.analysisSnapshot.risk
+                      ? report.analysisSnapshot.risk.toUpperCase()
+                      : "Unavailable"}
+                  </span>
+                  <span className="review-queue-evidence-score">
+                    Score:{" "}
+                    {Number.isFinite(report.analysisSnapshot.score)
+                      ? report.analysisSnapshot.score
+                      : "Unavailable"}
+                  </span>
+                  <span className="review-queue-evidence-summary">
+                    {getEvidenceSummary(report.analysisSnapshot)}
+                  </span>
+                </div>
+
+                <div className="review-queue-footer">
+                  <Link
+                    className="report-card-action"
+                    to={`/review/${encodeURIComponent(report.id)}`}
+                  >
+                    Open review
+                  </Link>
+                </div>
               </article>
             ))}
           </div>

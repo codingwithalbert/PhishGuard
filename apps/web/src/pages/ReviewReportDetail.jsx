@@ -760,7 +760,7 @@ function ReviewReportDetailPage() {
           </section>
 
           <section className="report-detail-section">
-            <h2>Student Report</h2>
+            <h2>Student report</h2>
 
             <dl className="report-detail-grid">
               <div>
@@ -797,7 +797,12 @@ function ReviewReportDetailPage() {
           </section>
 
           <section className="report-detail-section">
-            <h2>IT investigation</h2>
+            <h2>
+              IT investigation
+              <span className="report-section-badge report-section-badge-human">
+                Human IT review
+              </span>
+            </h2>
 
             {isCompleted ? (
               <p className="review-action-hint">
