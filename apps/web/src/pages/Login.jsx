@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
 import { loginUser } from "../services/api";
 
 function Login() {
@@ -43,11 +44,10 @@ function Login() {
   }
 
   return (
-    <main className="auth-main">
-      <h1>PhishGuard Login</h1>
-
-      <p>Sign in to access your phishing analysis dashboard.</p>
-
+    <AuthLayout
+      title="PhishGuard Login"
+      description="Sign in to access your phishing analysis dashboard."
+    >
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="email">Email</label>
@@ -59,6 +59,7 @@ function Login() {
             onChange={handleChange}
             required
             maxLength="254"
+            autoComplete="email"
           />
         </div>
 
@@ -72,6 +73,7 @@ function Login() {
             onChange={handleChange}
             required
             maxLength="128"
+            autoComplete="current-password"
           />
         </div>
 
@@ -86,10 +88,10 @@ function Login() {
 
       {error && <p role="alert">{error}</p>}
 
-      <p>
-        Don't have an account? <Link to="/register">Register</Link>
+      <p className="auth-footer-link">
+        Don&apos;t have an account? <Link to="/register">Register</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 

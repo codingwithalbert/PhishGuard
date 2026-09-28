@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
 import { registerUser } from "../services/api";
 
 function Register() {
@@ -51,13 +52,10 @@ function Register() {
   }
 
   return (
-    <main className="auth-main">
-      <h1>Create a PhishGuard Account</h1>
-
-      <p>
-        Register to analyze suspicious URLs and manage your scan history.
-      </p>
-
+    <AuthLayout
+      title="Create a PhishGuard Account"
+      description="Register to analyze suspicious URLs and manage your scan history."
+    >
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="name">Name</label>
@@ -70,6 +68,7 @@ function Register() {
             required
             minLength="2"
             maxLength="50"
+            autoComplete="name"
           />
         </div>
 
@@ -83,6 +82,7 @@ function Register() {
             onChange={handleChange}
             required
             maxLength="254"
+            autoComplete="email"
           />
         </div>
 
@@ -97,7 +97,11 @@ function Register() {
             required
             minLength="8"
             maxLength="128"
+            autoComplete="new-password"
           />
+          <p className="auth-help-note">
+            Use 8 to 128 characters.
+          </p>
         </div>
 
         <button type="submit" disabled={loading}>
@@ -105,13 +109,13 @@ function Register() {
         </button>
       </form>
 
-      {message && <p>{message}</p>}
+      {message && <p className="success-message">{message}</p>}
       {error && <p role="alert">{error}</p>}
 
-      <p>
+      <p className="auth-footer-link">
         Already have an account? <Link to="/login">Login</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 

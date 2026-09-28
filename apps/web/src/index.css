@@ -263,31 +263,63 @@ main.auth-main {
   justify-content: center;
 }
 
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.auth-brand .brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+.auth-brand-name {
+  color: var(--color-text-strong);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
 main.auth-main > h1 {
   margin-bottom: 0.5rem;
 }
 
-main.auth-main > h1::before {
-  content: "◈";
-  display: block;
-  margin-bottom: 0.75rem;
-  color: var(--primary);
-  font-size: 2rem;
+.auth-description {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 main.auth-main > form {
   width: 100%;
   max-width: none;
-  margin-top: 2rem;
+  margin-top: 1.75rem;
   padding: 1.5rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 main.auth-main > form button {
   width: 100%;
+  min-height: 44px;
   margin-top: 0.25rem;
+}
+
+.auth-footer-link {
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.auth-footer-link a {
+  font-weight: 700;
 }
 
 /* Authentication page helpers */
@@ -3002,6 +3034,11 @@ main.auth-main > form button {
   border-bottom: 1px solid var(--border);
 }
 
+.profile-details-list > div.profile-details-editable {
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--color-accent);
+}
+
 .profile-details-list > div:last-child {
   padding-bottom: 0;
   border-bottom: 0;
@@ -3037,6 +3074,15 @@ main.auth-main > form button {
 
 .profile-form-panel form {
   max-width: 520px;
+}
+
+.profile-password-panel {
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(13, 27, 45, 0.92);
+}
+
+.profile-password-panel > h2 {
+  color: var(--warning-text);
 }
 
 .profile-form-note {

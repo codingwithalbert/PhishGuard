@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
 import { resetPassword, toSafeErrorMessage } from "../services/api";
 
 const PASSWORD_MIN_LENGTH = 8;
@@ -77,14 +78,10 @@ function ResetPassword() {
   }
 
   return (
-    <main className="auth-main">
-      <h1>Choose a new PhishGuard password</h1>
-
-      <p>
-        Reset links expire after 15 minutes and can only be used once. You will
-        sign in with your new password after the reset.
-      </p>
-
+    <AuthLayout
+      title="Choose a new PhishGuard password"
+      description="Reset links expire after 15 minutes and can only be used once. You will sign in with your new password after the reset."
+    >
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="password">New password</label>
@@ -128,7 +125,7 @@ function ResetPassword() {
         <>
           <p className="success-message">{message}</p>
 
-          <p>
+          <p className="auth-footer-link">
             <Link to="/login">Return to login</Link>
           </p>
         </>
@@ -136,10 +133,10 @@ function ResetPassword() {
 
       {error && <p role="alert">{error}</p>}
 
-      <p>
+      <p className="auth-footer-link">
         Need a new link? <Link to="/forgot-password">Request a reset link</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 

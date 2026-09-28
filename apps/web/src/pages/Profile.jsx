@@ -133,12 +133,12 @@ function AccountDetails({ profile }) {
     >
       <h2 id="profile-details-heading">Account details</h2>
       <p className="profile-panel-note">
-        These values are supplied by the backend. Email and role cannot be
-        changed from this page.
+        These values are supplied by the backend. Your name can be edited below.
+        Email and role cannot be changed from this page.
       </p>
 
       <dl className="profile-details-list">
-        <div>
+        <div className="profile-details-editable">
           <dt>Name</dt>
           <dd>{profile.name}</dd>
         </div>
@@ -357,7 +357,7 @@ function ChangePasswordForm() {
 
   return (
     <section
-      className="profile-panel profile-form-panel"
+      className="profile-panel profile-form-panel profile-password-panel"
       aria-labelledby="profile-password-heading"
     >
       <h2 id="profile-password-heading">Change password</h2>

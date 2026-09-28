@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
 import { requestPasswordReset, toSafeErrorMessage } from "../services/api";
 
 const GENERIC_SUCCESS_MESSAGE =
@@ -52,14 +53,10 @@ function ForgotPassword() {
   }
 
   return (
-    <main className="auth-main">
-      <h1>Reset your PhishGuard password</h1>
-
-      <p>
-        Enter the email address for your account. If a reset link can be sent
-        it will arrive by email and expires after 15 minutes.
-      </p>
-
+    <AuthLayout
+      title="Reset your PhishGuard password"
+      description="Enter the email address for your account. If a reset link can be sent it will arrive by email and expires after 15 minutes."
+    >
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="email">Email</label>
@@ -83,10 +80,10 @@ function ForgotPassword() {
       {message && <p className="success-message">{message}</p>}
       {error && <p role="alert">{error}</p>}
 
-      <p>
+      <p className="auth-footer-link">
         Remembered your password? <Link to="/login">Back to login</Link>
       </p>
-    </main>
+    </AuthLayout>
   );
 }
 
