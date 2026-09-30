@@ -193,6 +193,30 @@ test("GET /api/auth/me for an inactive authenticated account returns the safe 40
   // This proves the me controller checks activity, not global JWT revocation.
 });
 
+test("GET /api/auth/me rejects a correctly signed expired JWT with a safe 403 before downstream execution", async (t) => {
+  const account = makeAccount();
+  const state = stubPersistence(t, account);
+  const meRoute = authRoutes.stack.find((layer) => layer.route?.path === "/me").route;
+  const handler = t.mock.method(meRoute.stack.at(-1), "handle");
+  const claims = { userId: String(account._id), role: account.role, exp: 1 };
+  const token = jwt.sign(claims, testJwtSecret, { noTimestamp: true });
+
+  // Valid structure/signature; expiration alone makes this token invalid.
+  assert.deepEqual(jwt.verify(token, testJwtSecret, { ignoreExpiration: true }), claims);
+  assert.throws(() => jwt.verify(token, testJwtSecret), { name: "TokenExpiredError" });
+
+  const response = await fetch(`${baseUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    success: false,
+    error: "Invalid or expired token"
+  });
+  assert.equal(handler.mock.callCount(), 0);
+  assert.deepEqual(state, { finds: [], selections: [], ids: [], writes: [], stored: [] });
+});
+
 test("public registration ignores forged Staff and Admin privileges and stores an ordinary user", async (t) => {
   const state = stubPersistence(t);
   for (const role of ["staff", "admin"]) {
