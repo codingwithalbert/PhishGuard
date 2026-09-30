@@ -46,7 +46,7 @@ function Login() {
   return (
     <AuthLayout
       title="PhishGuard Login"
-      description="Sign in to access your phishing analysis dashboard."
+      description="Sign in to analyze suspicious URLs, build cybersecurity awareness, and report incidents to school IT."
     >
       <form onSubmit={handleSubmit}>
         <div>

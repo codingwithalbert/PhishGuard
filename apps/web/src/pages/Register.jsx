@@ -54,7 +54,7 @@ function Register() {
   return (
     <AuthLayout
       title="Create a PhishGuard Account"
-      description="Register to analyze suspicious URLs and manage your scan history."
+      description="Create an account to analyze suspicious URLs, complete cybersecurity training, and report incidents to school IT."
     >
       <form onSubmit={handleSubmit}>
         <div>

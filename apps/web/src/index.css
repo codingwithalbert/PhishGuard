@@ -146,7 +146,7 @@ p {
 }
 
 main {
-  width: min(1100px, calc(100% - 2rem));
+  width: min(1200px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 2rem 0 4rem;
 }
@@ -878,7 +878,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   main {
-    width: min(100% - 1.25rem, 1100px);
+    width: min(100% - 1.25rem, 1200px);
     padding-top: 1.25rem;
   }
 
@@ -935,7 +935,7 @@ main.auth-main > form button {
 /* Awareness Assessment */
 
 .awareness-page {
-  width: min(900px, calc(100% - 2rem));
+  width: min(960px, calc(100% - 2rem));
 }
 
 .awareness-page-title {
@@ -1225,7 +1225,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .awareness-page {
-    width: min(100% - 1.25rem, 900px);
+    width: min(100% - 1.25rem, 960px);
   }
 
   .awareness-page-title {
@@ -1299,7 +1299,7 @@ main.auth-main > form button {
 /* Training Exposure */
 
 .training-page {
-  width: min(900px, calc(100% - 2rem));
+  width: min(960px, calc(100% - 2rem));
 }
 
 .training-intro-note {
@@ -1508,7 +1508,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .training-page {
-    width: min(100% - 1.25rem, 900px);
+    width: min(100% - 1.25rem, 960px);
   }
 
   .training-progress-grid {
@@ -1533,7 +1533,7 @@ main.auth-main > form button {
 /* Personal Progress */
 
 .progress-page {
-  width: min(1050px, calc(100% - 2rem));
+  width: min(1120px, calc(100% - 2rem));
 }
 
 .progress-intro {
@@ -1980,7 +1980,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .progress-page {
-    width: min(100% - 1.25rem, 1050px);
+    width: min(100% - 1.25rem, 1120px);
   }
 
   .progress-latest-grid,
@@ -2017,7 +2017,7 @@ main.auth-main > form button {
 /* Reporting V1 */
 
 .reports-page {
-  width: min(1050px, calc(100% - 2rem));
+  width: min(1120px, calc(100% - 2rem));
 }
 
 .reports-intro {
@@ -2377,7 +2377,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .reports-page {
-    width: min(100% - 1.25rem, 1050px);
+    width: min(100% - 1.25rem, 1120px);
   }
 
   .report-card-heading,
@@ -2542,7 +2542,7 @@ main.auth-main > form button {
 }
 
 .review-page {
-  width: min(1150px, calc(100% - 2rem));
+  width: min(1200px, calc(100% - 2rem));
 }
 
 .review-queue-section {
@@ -2636,7 +2636,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .review-page {
-    width: min(100% - 1.25rem, 1150px);
+    width: min(100% - 1.25rem, 1200px);
   }
 
   .review-queue-grid {
@@ -2702,7 +2702,7 @@ main.auth-main > form button {
 /* Research Analytics V1 */
 
 .research-page {
-  width: min(1050px, calc(100% - 2rem));
+  width: min(1120px, calc(100% - 2rem));
 }
 
 .research-intro {
@@ -2930,7 +2930,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .research-page {
-    width: min(100% - 1.25rem, 1050px);
+    width: min(100% - 1.25rem, 1120px);
   }
 
   .research-cohort-grid {
@@ -2957,7 +2957,7 @@ main.auth-main > form button {
 /* Profile & Change Password V1 */
 
 .profile-page {
-  width: min(900px, calc(100% - 2rem));
+  width: min(960px, calc(100% - 2rem));
 }
 
 .profile-intro {
@@ -3077,12 +3077,8 @@ main.auth-main > form button {
 }
 
 .profile-password-panel {
-  border-color: rgba(251, 191, 36, 0.25);
+  border-color: rgba(251, 191, 36, 0.15);
   background: rgba(13, 27, 45, 0.92);
-}
-
-.profile-password-panel > h2 {
-  color: var(--warning-text);
 }
 
 .profile-form-note {
@@ -3114,7 +3110,7 @@ main.auth-main > form button {
 
 @media (max-width: 720px) {
   .profile-page {
-    width: min(100% - 1.25rem, 900px);
+    width: min(100% - 1.25rem, 960px);
   }
 
   .profile-details-list > div {
