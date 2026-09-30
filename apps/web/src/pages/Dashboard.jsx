@@ -326,10 +326,7 @@ function Dashboard() {
               {latestAwarenessAssessment !== null ? (
                 <>
                   <span className="dashboard-status-value">
-                    {latestAwarenessAssessment.score}
-                    <span className="dashboard-status-value-total">
-                      {" "}/ {latestAwarenessAssessment.totalQuestions}
-                    </span>
+                    {latestAwarenessAssessment.score}%<span className="dashboard-status-value-total"> · {latestAwarenessAssessment.totalQuestions} questions</span>
                   </span>
                   <span className="dashboard-status-meta">
                     Completed{" "}
@@ -357,10 +354,7 @@ function Dashboard() {
               {latestPhishingIdentificationAssessment !== null ? (
                 <>
                   <span className="dashboard-status-value">
-                    {latestPhishingIdentificationAssessment.score}
-                    <span className="dashboard-status-value-total">
-                      {" "}/ {latestPhishingIdentificationAssessment.totalScenarios}
-                    </span>
+                    {latestPhishingIdentificationAssessment.score}%<span className="dashboard-status-value-total"> · {latestPhishingIdentificationAssessment.totalScenarios} scenarios</span>
                   </span>
                   <span className="dashboard-status-meta">
                     Completed{" "}
