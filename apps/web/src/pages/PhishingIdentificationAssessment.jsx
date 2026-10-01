@@ -219,7 +219,7 @@ function PhishingIdentificationAssessment() {
   }
 
   return (
-    <main className="awareness-page phishing-assessment-page" id="main-content">
+    <main className="awareness-page assessment-page phishing-assessment-page" id="main-content">
       <PageHeader
         motion
         title="Phishing Identification Assessment"
@@ -264,19 +264,25 @@ function PhishingIdentificationAssessment() {
           </div>
         ) : displayedResult ? (
           <>
-            <p className="awareness-score-label">
-              Backend-calculated Phishing Identification Score
-            </p>
-            <p className="awareness-score">
-              {displayedResult.score}
-              <span>/100</span>
-            </p>
-            <p>
-              Completed {formatCompletedAt(displayedResult.completedAt)}
-            </p>
-            <p>
-              {displayedResult.totalScenarios} scenarios completed
-            </p>
+            <div className="assessment-result-summary">
+              <div className="assessment-result-score">
+                <p className="awareness-score-label">
+                  Backend-calculated Phishing Identification Score
+                </p>
+                <p className="awareness-score">
+                  {displayedResult.score}
+                  <span>/100</span>
+                </p>
+              </div>
+              <div className="assessment-result-meta">
+                <p>
+                  Completed {formatCompletedAt(displayedResult.completedAt)}
+                </p>
+                <p>
+                  {displayedResult.totalScenarios} scenarios completed
+                </p>
+              </div>
+            </div>
             {submittedResult && (
               <>
                 <p className="success-message" role="status">
@@ -314,9 +320,23 @@ function PhishingIdentificationAssessment() {
           </div>
 
           {!scenariosLoading && !submittedResult && (
-            <span className="assessment-progress" aria-live="polite">
-              {answeredCount} of {scenarios.length} answered
-            </span>
+            <div className="assessment-completion">
+              <span className="assessment-progress" aria-live="polite">
+                {answeredCount} of {scenarios.length} answered
+              </span>
+              {scenarios.length === 10 && (
+                <progress
+                  className="assessment-completion-bar"
+                  value={answeredCount}
+                  max={10}
+                  aria-label="Phishing Identification Assessment completion"
+                  aria-valuemin={0}
+                  aria-valuemax={10}
+                  aria-valuenow={answeredCount}
+                  aria-valuetext={`${answeredCount} of 10 answered`}
+                />
+              )}
+            </div>
           )}
         </div>
 

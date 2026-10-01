@@ -129,7 +129,7 @@ function Dashboard() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
   const summaryRef = useEntranceMotion({
-    selector: ".dashboard-status-item",
+    selector: ".dashboard-status-item, .dashboard-recent-panel",
     enabled: Boolean(summary) && !summaryLoading,
     duration: 0.28,
     stagger: 0.05,
@@ -305,9 +305,10 @@ function Dashboard() {
         description="Review your learning status, analyze a suspicious URL, and check your analysis history."
       />
 
-      <section
+      <div
         className="dashboard-status"
         ref={summaryRef}
+        role="region"
         aria-label="Your progress"
         aria-busy={summaryLoading}
       >
@@ -339,99 +340,114 @@ function Dashboard() {
             )}
           </div>
         ) : summary ? (
-          <div className="dashboard-status-grid">
-            <div className="dashboard-status-item">
-              <span className="dashboard-status-label">
-                Awareness Assessment
-              </span>
+          <>
+            <div className="dashboard-status-grid">
+              <article className="dashboard-status-item">
+                <h2 className="dashboard-status-label">
+                  Awareness Assessment
+                </h2>
 
-              {latestAwarenessAssessment !== null ? (
-                <>
-                  <span className="dashboard-status-value">
-                    {latestAwarenessAssessment.score}%<span className="dashboard-status-value-total"> · {latestAwarenessAssessment.totalQuestions} questions</span>
+                {latestAwarenessAssessment !== null ? (
+                  <>
+                    <span className="dashboard-status-value">
+                      {latestAwarenessAssessment.score}%
+                    </span>
+                    <span className="dashboard-status-meta">
+                      {latestAwarenessAssessment.totalQuestions} questions
+                    </span>
+                    <span className="dashboard-status-meta">
+                      Completed{" "}
+                      <time dateTime={latestAwarenessAssessment.completedAt}>
+                        {formatDate(latestAwarenessAssessment.completedAt)}
+                      </time>
+                    </span>
+                  </>
+                ) : (
+                  <span className="dashboard-status-value dashboard-status-value-pending">
+                    Not yet completed
                   </span>
-                  <span className="dashboard-status-meta">
-                    Completed{" "}
-                    <time dateTime={latestAwarenessAssessment.completedAt}>
-                      {formatDate(latestAwarenessAssessment.completedAt)}
-                    </time>
+                )}
+
+                <Link className="dashboard-status-link" to="/awareness">
+                  Open assessment
+                </Link>
+              </article>
+
+              <article className="dashboard-status-item">
+                <h2 className="dashboard-status-label">
+                  Phishing Identification
+                </h2>
+
+                {latestPhishingIdentificationAssessment !== null ? (
+                  <>
+                    <span className="dashboard-status-value">
+                      {latestPhishingIdentificationAssessment.score}%
+                    </span>
+                    <span className="dashboard-status-meta">
+                      {latestPhishingIdentificationAssessment.totalScenarios} scenarios
+                    </span>
+                    <span className="dashboard-status-meta">
+                      Completed{" "}
+                      <time
+                        dateTime={
+                          latestPhishingIdentificationAssessment.completedAt
+                        }
+                      >
+                        {formatDate(
+                          latestPhishingIdentificationAssessment.completedAt
+                        )}
+                      </time>
+                    </span>
+                  </>
+                ) : (
+                  <span className="dashboard-status-value dashboard-status-value-pending">
+                    Not yet completed
                   </span>
-                </>
-              ) : (
-                <span className="dashboard-status-value dashboard-status-value-pending">
-                  Not yet completed
+                )}
+
+                <Link
+                  className="dashboard-status-link"
+                  to="/phishing-identification"
+                >
+                  Open assessment
+                </Link>
+              </article>
+
+              <article className="dashboard-status-item">
+                <h2 className="dashboard-status-label">Training</h2>
+                <span className="dashboard-status-value">
+                  {trainingProgress.completedModules} / {trainingProgress.totalModules}
+                  <span className="dashboard-status-value-total">
+                    {" "}modules
+                  </span>
                 </span>
-              )}
-
-              <Link className="dashboard-status-link" to="/awareness">
-                Open assessment
-              </Link>
+                <span className="dashboard-status-meta">
+                  Training Exposure {trainingProgress.trainingExposure}%
+                </span>
+                <Link className="dashboard-status-link" to="/training">
+                  Open training
+                </Link>
+              </article>
             </div>
 
-            <div className="dashboard-status-item">
-              <span className="dashboard-status-label">
-                Phishing Identification
-              </span>
-
-              {latestPhishingIdentificationAssessment !== null ? (
-                <>
-                  <span className="dashboard-status-value">
-                    {latestPhishingIdentificationAssessment.score}%<span className="dashboard-status-value-total"> · {latestPhishingIdentificationAssessment.totalScenarios} scenarios</span>
-                  </span>
-                  <span className="dashboard-status-meta">
-                    Completed{" "}
-                    <time
-                      dateTime={
-                        latestPhishingIdentificationAssessment.completedAt
-                      }
-                    >
-                      {formatDate(
-                        latestPhishingIdentificationAssessment.completedAt
-                      )}
-                    </time>
-                  </span>
-                </>
-              ) : (
-                <span className="dashboard-status-value dashboard-status-value-pending">
-                  Not yet completed
-                </span>
-              )}
-
-              <Link
-                className="dashboard-status-link"
-                to="/phishing-identification"
-              >
-                Open assessment
-              </Link>
-            </div>
-
-            <div className="dashboard-status-item">
-              <span className="dashboard-status-label">Training</span>
-              <span className="dashboard-status-value">
-                {trainingProgress.completedModules}
-                <span className="dashboard-status-value-total">
-                  {" "}/ {trainingProgress.totalModules} modules
-                </span>
-              </span>
-              <span className="dashboard-status-meta">
-                Training Exposure {trainingProgress.trainingExposure}%
-              </span>
-              <Link className="dashboard-status-link" to="/training">
-                Open training
-              </Link>
-            </div>
-
-            <div className="dashboard-status-item">
-              <span className="dashboard-status-label">URL analyses</span>
-              <span className="dashboard-status-value">
-                {urlAnalyses.total}
-                <span className="dashboard-status-value-total"> total</span>
-              </span>
+            <section
+              className="dashboard-recent-panel"
+              aria-labelledby="dashboard-recent-heading"
+            >
+              <div className="dashboard-recent-heading">
+                <div className="dashboard-recent-title">
+                  <h2 id="dashboard-recent-heading">Recent URL analyses</h2>
+                  <span className="dashboard-recent-total">{urlAnalyses.total} total</span>
+                </div>
+                <a className="dashboard-status-link" href="#history">
+                  Review history
+                </a>
+              </div>
 
               {urlAnalyses.recent.length === 0 ? (
-                <span className="dashboard-status-meta">
+                <p className="dashboard-status-meta">
                   No URL analyses yet. Use Analyze URL to start your history.
-                </span>
+                </p>
               ) : (
                 <ul className="dashboard-status-recent">
                   {urlAnalyses.recent.map((analysis) => (
@@ -445,23 +461,22 @@ function Dashboard() {
                         {analysis.url}
                       </span>
                       <span className="dashboard-status-recent-meta">
-                        <span>Score {analysis.score}</span>
-                        <time dateTime={analysis.createdAt}>
-                          {formatDate(analysis.createdAt)}
-                        </time>
+                        Score {analysis.score}
                       </span>
+                      <time
+                        className="dashboard-status-recent-meta dashboard-status-recent-time"
+                        dateTime={analysis.createdAt}
+                      >
+                        {formatDate(analysis.createdAt)}
+                      </time>
                     </li>
                   ))}
                 </ul>
               )}
-
-              <a className="dashboard-status-link" href="#history">
-                Review history
-              </a>
-            </div>
-          </div>
+            </section>
+          </>
         ) : null}
-      </section>
+      </div>
 
       <section id="scanner" className="scanner-section" ref={scannerRef}>
         <h2>Analyze a URL</h2>

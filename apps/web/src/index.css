@@ -343,14 +343,17 @@ main.auth-main > form button {
 
 /* Dashboard header */
 
-/* Dashboard status strip */
+/* Dashboard learning overview and recent-analysis panel */
 
 .dashboard-status {
   margin-bottom: 1.5rem;
 }
 
 .dashboard-status-loading {
-  padding: 0.5rem 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 .dashboard-status-loading .awareness-skeleton {
@@ -388,8 +391,9 @@ main.auth-main > form button {
 
 .dashboard-status-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .dashboard-status-item {
@@ -398,9 +402,14 @@ main.auth-main > form button {
   align-items: flex-start;
   gap: 0.35rem;
   min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 .dashboard-status-label {
+  margin: 0 0 var(--space-3);
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
@@ -410,7 +419,7 @@ main.auth-main > form button {
 
 .dashboard-status-value {
   color: var(--color-text-strong);
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -440,41 +449,52 @@ main.auth-main > form button {
 }
 
 .dashboard-status-recent {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
   margin: 0;
   padding: 0;
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
 .dashboard-status-recent li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.5rem;
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem minmax(10rem, auto);
+  align-items: center;
+  gap: var(--space-3);
   min-width: 0;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard-status-recent li:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-status-recent .risk {
+  justify-self: start;
 }
 
 .dashboard-status-recent-url {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .dashboard-status-recent-meta {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.75rem;
   color: var(--muted);
   font-size: 0.75rem;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-status-recent-time {
+  text-align: right;
 }
 
 .dashboard-status-link {
-  margin-top: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--primary);
   font-size: 0.85rem;
   font-weight: 700;
@@ -483,6 +503,62 @@ main.auth-main > form button {
 
 .dashboard-status-link:hover {
   text-decoration: underline;
+}
+
+.dashboard-status-item > .dashboard-status-link {
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+
+.dashboard-recent-panel {
+  margin: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.dashboard-recent-heading,
+.dashboard-recent-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dashboard-recent-heading {
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.dashboard-recent-title h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dashboard-recent-total {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+@media (min-width: 721px) and (max-width: 1199px) {
+  .dashboard-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-status-grid > .dashboard-status-item:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-status-recent li {
+    grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem;
+  }
+
+  .dashboard-status-recent-time {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
 }
 
 /* Scanner */
@@ -911,6 +987,21 @@ main.auth-main > form button {
     gap: 1.25rem;
   }
 
+  .dashboard-status-recent li {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .dashboard-status-recent-url {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .dashboard-status-recent-time {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
   .scanner-section {
     padding: 1.1rem;
   }
@@ -1325,6 +1416,213 @@ main.auth-main > form button {
   }
 }
 
+/* Assessment-only refinement: the shared awareness-page class also appears
+   on Training, Progress, Profile, and Research, so scope to assessment-page. */
+
+.assessment-page .awareness-result-section {
+  padding: var(--space-5) var(--space-6);
+}
+
+.assessment-page .assessment-result-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.assessment-page .awareness-score-label {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.assessment-page .awareness-score {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.assessment-page .awareness-score span {
+  margin: 0;
+}
+
+.assessment-page .assessment-result-meta {
+  min-width: 0;
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.assessment-page .assessment-result-meta p {
+  margin: 0;
+}
+
+.assessment-page .assessment-result-meta p + p {
+  margin-top: var(--space-2);
+  color: var(--color-muted);
+}
+
+.assessment-page .awareness-result-section > .success-message {
+  margin: var(--space-4) 0 0;
+}
+
+.assessment-page .awareness-result-section > h2:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
+.assessment-page .assessment-completion {
+  display: grid;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  width: 220px;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+}
+
+.assessment-page .assessment-progress {
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+}
+
+.assessment-page .assessment-completion-bar {
+  display: block;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  color: var(--color-accent);
+  accent-color: var(--color-accent);
+}
+
+.assessment-page .assessment-completion-bar::-webkit-progress-bar {
+  background: var(--color-border);
+}
+
+.assessment-page .assessment-completion-bar::-webkit-progress-value {
+  background: var(--color-accent);
+}
+
+.assessment-page .assessment-completion-bar::-moz-progress-bar {
+  background: var(--color-accent);
+}
+
+.assessment-page .awareness-question-list {
+  display: grid;
+  gap: var(--space-5);
+  border-top: 0;
+}
+
+.assessment-page .awareness-question {
+  margin: 0;
+  padding: var(--space-5);
+  border: 0;
+  border-top: 1px solid var(--color-border-strong);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--color-sunken);
+}
+
+.assessment-page .awareness-question legend,
+.assessment-page .phishing-question-prompt {
+  overflow-wrap: anywhere;
+}
+
+.assessment-page .question-number {
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.assessment-page .awareness-choices {
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.assessment-page .awareness-choice {
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .assessment-page .awareness-choice:not(:has(input:disabled)):hover {
+    border-color: var(--color-accent);
+    background: var(--color-surface-elevated);
+  }
+}
+
+.assessment-page .awareness-choice-selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.assessment-page .awareness-choice:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.assessment-page .awareness-choice:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.assessment-page .phishing-scenario-evidence {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-subtle);
+}
+
+.assessment-page .phishing-scenario-label {
+  color: var(--color-info);
+}
+
+.assessment-page .phishing-scenario-copy {
+  overflow-wrap: anywhere;
+}
+
+.assessment-page .assessment-actions {
+  margin-top: var(--space-4);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+@media (max-width: 720px) {
+  .assessment-page .awareness-result-section,
+  .assessment-page .awareness-question {
+    padding: var(--space-4);
+  }
+
+  .assessment-page .assessment-result-summary {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .assessment-page .assessment-result-meta {
+    padding: var(--space-3) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .assessment-page .assessment-completion {
+    width: 100%;
+  }
+}
+
 /* Training Exposure */
 
 .training-page {
@@ -1556,6 +1854,170 @@ main.auth-main > form button {
   .training-module-actions button {
     width: 100%;
     min-width: 0;
+  }
+}
+
+/* Training/Progress-only refinement: preserve the existing page systems. */
+
+.training-page .training-modules-section {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.training-page .training-module-list {
+  display: grid;
+  gap: var(--space-6);
+  border-top: 0;
+}
+
+.training-page .training-module {
+  min-width: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-top-color: var(--color-accent-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.training-page .training-module-header {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.training-page .training-module-number {
+  margin-bottom: var(--space-2);
+  color: var(--color-info);
+}
+
+.training-page .training-module h3 {
+  font-size: 1.35rem;
+  line-height: 1.35;
+}
+
+.training-page .training-module-objective {
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.training-page .training-module-content {
+  margin-top: var(--space-5);
+}
+
+.training-page .training-content-section + .training-content-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.training-page .training-content-section h4 {
+  margin-bottom: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.training-page .training-content-section ul {
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.training-page .training-content-section li {
+  margin: var(--space-2) 0;
+  overflow-wrap: anywhere;
+}
+
+.training-page .training-module-actions button {
+  margin: 0;
+}
+
+.training-page .training-module-status,
+.progress-page .progress-module-status {
+  padding: 0.35rem 0.65rem;
+  border-color: var(--color-border-strong);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.training-page .training-module-completed .training-module-status,
+.progress-page .progress-module-completed .progress-module-status {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  color: var(--color-success-text);
+}
+
+.training-page .training-completion-meter,
+.progress-page .training-completion-meter {
+  margin-top: var(--space-5);
+}
+
+.training-page .training-completion-meter-label,
+.progress-page .training-completion-meter-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.training-page .training-completion-meter-bar,
+.progress-page .training-completion-meter-bar {
+  display: block;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  color: var(--color-accent);
+  accent-color: var(--color-accent);
+}
+
+.training-page .training-completion-meter-bar::-webkit-progress-bar,
+.progress-page .training-completion-meter-bar::-webkit-progress-bar {
+  background: var(--color-border);
+}
+
+.training-page .training-completion-meter-bar::-webkit-progress-value,
+.progress-page .training-completion-meter-bar::-webkit-progress-value {
+  background: var(--color-accent);
+}
+
+.training-page .training-completion-meter-bar::-moz-progress-bar,
+.progress-page .training-completion-meter-bar::-moz-progress-bar {
+  background: var(--color-accent);
+}
+
+.progress-page .progress-state-summary {
+  padding: var(--space-4) var(--space-5);
+}
+
+.progress-page .progress-module {
+  padding: var(--space-4) 0;
+}
+
+.progress-page .progress-module-header > div {
+  min-width: 0;
+}
+
+.progress-page .progress-module-header h3,
+.progress-page .progress-module-header p {
+  overflow-wrap: anywhere;
+}
+
+.progress-page .progress-module-date {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .training-page .training-module {
+    padding: var(--space-4);
   }
 }
 

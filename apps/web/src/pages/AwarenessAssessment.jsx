@@ -210,7 +210,7 @@ function AwarenessAssessment() {
   }
 
   return (
-    <main className="awareness-page" id="main-content">
+    <main className="awareness-page assessment-page" id="main-content">
       <PageHeader
         motion
         title="Awareness Assessment"
@@ -254,19 +254,25 @@ function AwarenessAssessment() {
           </div>
         ) : displayedResult ? (
           <>
-            <p className="awareness-score-label">
-              Backend-calculated Awareness Score
-            </p>
-            <p className="awareness-score">
-              {displayedResult.score}
-              <span>/100</span>
-            </p>
-            <p>
-              Completed {formatCompletedAt(displayedResult.completedAt)}
-            </p>
-            <p>
-              {displayedResult.totalQuestions} questions completed
-            </p>
+            <div className="assessment-result-summary">
+              <div className="assessment-result-score">
+                <p className="awareness-score-label">
+                  Backend-calculated Awareness Score
+                </p>
+                <p className="awareness-score">
+                  {displayedResult.score}
+                  <span>/100</span>
+                </p>
+              </div>
+              <div className="assessment-result-meta">
+                <p>
+                  Completed {formatCompletedAt(displayedResult.completedAt)}
+                </p>
+                <p>
+                  {displayedResult.totalQuestions} questions completed
+                </p>
+              </div>
+            </div>
             {submittedResult && (
               <p className="success-message" role="status">
                 Your assessment was submitted successfully.
@@ -295,9 +301,23 @@ function AwarenessAssessment() {
           </div>
 
           {!questionsLoading && !submittedResult && (
-            <span className="assessment-progress" aria-live="polite">
-              {answeredCount} of {questions.length} answered
-            </span>
+            <div className="assessment-completion">
+              <span className="assessment-progress" aria-live="polite">
+                {answeredCount} of {questions.length} answered
+              </span>
+              {questions.length === 10 && (
+                <progress
+                  className="assessment-completion-bar"
+                  value={answeredCount}
+                  max={10}
+                  aria-label="Awareness Assessment completion"
+                  aria-valuemin={0}
+                  aria-valuemax={10}
+                  aria-valuenow={answeredCount}
+                  aria-valuetext={`${answeredCount} of 10 answered`}
+                />
+              )}
+            </div>
           )}
         </div>
 

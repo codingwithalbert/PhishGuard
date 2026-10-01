@@ -313,32 +313,49 @@ function TrainingPage() {
         ) : progressError ? (
           <TrainingErrorState error={progressError} onRetry={loadTraining} />
         ) : progress ? (
-          <div className="training-progress-grid">
-            <div className="training-progress-stat">
-              <span className="training-progress-label">
-                Completed modules
-              </span>
-              <strong className="training-progress-value">
-                {progress.completedModules}
-              </strong>
-            </div>
+          <>
+            <div className="training-progress-grid">
+              <div className="training-progress-stat">
+                <span className="training-progress-label">
+                  Completed modules
+                </span>
+                <strong className="training-progress-value">
+                  {progress.completedModules}
+                </strong>
+              </div>
 
-            <div className="training-progress-stat">
-              <span className="training-progress-label">Total modules</span>
-              <strong className="training-progress-value">
-                {progress.totalModules}
-              </strong>
-            </div>
+              <div className="training-progress-stat">
+                <span className="training-progress-label">Total modules</span>
+                <strong className="training-progress-value">
+                  {progress.totalModules}
+                </strong>
+              </div>
 
-            <div className="training-progress-stat">
-              <span className="training-progress-label">
-                Training Exposure
-              </span>
-              <strong className="training-progress-value">
-                {progress.trainingExposure}%
-              </strong>
+              <div className="training-progress-stat">
+                <span className="training-progress-label">
+                  Training Exposure
+                </span>
+                <strong className="training-progress-value">
+                  {progress.trainingExposure}%
+                </strong>
+              </div>
             </div>
-          </div>
+            <div className="training-completion-meter">
+              <p className="training-completion-meter-label">
+                <span>Training Exposure · module completion</span>
+                <span>{progress.completedModules} / {progress.totalModules} modules completed</span>
+              </p>
+              {progress.totalModules > 0 && (
+                <progress
+                  className="training-completion-meter-bar"
+                  value={progress.completedModules}
+                  max={progress.totalModules}
+                  aria-label="Training Exposure: recorded module completion"
+                  aria-valuetext={`${progress.completedModules} of ${progress.totalModules} modules completed`}
+                />
+              )}
+            </div>
+          </>
         ) : (
           <p className="awareness-status" role="status">
             Training progress is unavailable right now.

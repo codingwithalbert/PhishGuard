@@ -245,6 +245,22 @@ function TrainingExposureSummary({ training }) {
         </div>
       </div>
 
+      <div className="training-completion-meter">
+        <p className="training-completion-meter-label">
+          <span>Training Exposure · module completion</span>
+          <span>{training.completedModules} / {training.totalModules} modules completed</span>
+        </p>
+        {training.totalModules > 0 && (
+          <progress
+            className="training-completion-meter-bar"
+            value={training.completedModules}
+            max={training.totalModules}
+            aria-label="Training Exposure: recorded module completion"
+            aria-valuetext={`${training.completedModules} of ${training.totalModules} modules completed`}
+          />
+        )}
+      </div>
+
       <p className="progress-boundary-note">
         Training Exposure represents recorded module completion. It is
         descriptive and does not demonstrate phishing resistance or training
