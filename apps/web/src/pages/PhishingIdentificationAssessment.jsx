@@ -221,6 +221,7 @@ function PhishingIdentificationAssessment() {
   return (
     <main className="awareness-page phishing-assessment-page" id="main-content">
       <PageHeader
+        motion
         title="Phishing Identification Assessment"
         description={
           <p>

@@ -6,6 +6,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import useEntranceMotion from "../hooks/useEntranceMotion";
 import {
   completeTrainingModule,
   getTrainingModules,
@@ -116,6 +117,12 @@ function TrainingPage() {
   const [pendingModuleId, setPendingModuleId] = useState(null);
   const [completionError, setCompletionError] = useState(null);
   const [completionMessage, setCompletionMessage] = useState("");
+  const progressRef = useEntranceMotion({
+    selector: ".training-progress-grid",
+    enabled: Boolean(progress) && !progressLoading,
+    duration: 0.25,
+    offset: 6
+  });
 
   const loadTraining = useCallback(async () => {
     setModulesLoading(true);
@@ -249,6 +256,7 @@ function TrainingPage() {
   return (
     <main className="awareness-page training-page" id="main-content">
       <PageHeader
+        motion
         title="Training Exposure"
         description={
           <>
@@ -268,6 +276,7 @@ function TrainingPage() {
 
       <section
         className="training-progress-section"
+        ref={progressRef}
         aria-labelledby="training-progress-heading"
         aria-busy={progressLoading}
       >

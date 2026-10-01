@@ -1,0 +1,81 @@
+.phishguard-mark {
+  display: block;
+  width: 30px;
+  height: 33px;
+  flex-shrink: 0;
+  color: var(--color-accent);
+}
+
+.brand-mark .phishguard-mark {
+  width: 26px;
+  height: 29px;
+}
+
+.topbar-brand-mark {
+  display: none;
+  width: 20px;
+  height: 22px;
+}
+
+/* Keep the existing centered auth column and its direct-child form rules. */
+.auth-layout {
+  position: relative;
+  isolation: isolate;
+}
+
+.cyber-scene {
+  display: none;
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .topbar-brand-mark {
+    display: block;
+  }
+
+  .auth-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.45fr) minmax(0, 0.55fr);
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-12);
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 0 var(--space-8);
+  }
+
+  .auth-layout > main.auth-main {
+    width: 100%;
+    margin: 0;
+  }
+
+  .cyber-scene {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1;
+    justify-self: center;
+  }
+
+  .cyber-scene-fallback {
+    display: block;
+    width: 100%;
+    height: 100%;
+    color: var(--color-accent);
+  }
+
+  .cyber-scene-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cyber-scene[data-ready="true"] .cyber-scene-fallback {
+    visibility: hidden;
+  }
+}

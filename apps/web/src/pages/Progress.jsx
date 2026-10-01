@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import useEntranceMotion from "../hooks/useEntranceMotion";
 import { getProgress } from "../services/api";
 
 function isAssessmentAttempt(attempt, totalKey) {
@@ -389,6 +390,13 @@ function ProgressPage() {
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const latestCardsRef = useEntranceMotion({
+    selector: ".progress-latest-card",
+    enabled: Boolean(progress) && !loading,
+    duration: 0.25,
+    stagger: 0.045,
+    offset: 6
+  });
 
   const loadProgress = useCallback(async () => {
     setLoading(true);
@@ -444,6 +452,7 @@ function ProgressPage() {
   return (
     <main className="awareness-page progress-page" id="main-content" aria-busy={loading}>
       <PageHeader
+        motion
         title="Personal Progress"
         description={
           <>
@@ -485,7 +494,7 @@ function ProgressPage() {
               </div>
             </div>
 
-            <div className="progress-latest-grid">
+            <div className="progress-latest-grid" ref={latestCardsRef}>
               <LatestAssessmentCard
                 title="Awareness Assessment"
                 assessment={awareness.latest}

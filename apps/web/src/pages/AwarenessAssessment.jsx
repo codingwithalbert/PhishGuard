@@ -212,6 +212,7 @@ function AwarenessAssessment() {
   return (
     <main className="awareness-page" id="main-content">
       <PageHeader
+        motion
         title="Awareness Assessment"
         description={
           <p>

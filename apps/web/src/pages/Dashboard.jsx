@@ -6,6 +6,7 @@ import {
 import { Link } from "react-router-dom";
 import AnalysisFindings from "../components/AnalysisFindings";
 import PageHeader from "../components/PageHeader";
+import useEntranceMotion from "../hooks/useEntranceMotion";
 import {
   getValidFindings as getFindings
 } from "../components/reporting/reportingUi";
@@ -127,6 +128,25 @@ function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
+  const summaryRef = useEntranceMotion({
+    selector: ".dashboard-status-item",
+    enabled: Boolean(summary) && !summaryLoading,
+    duration: 0.28,
+    stagger: 0.05,
+    offset: 6
+  });
+  const scannerRef = useEntranceMotion({ duration: 0.28, offset: 6 });
+  const historyRef = useEntranceMotion({
+    selector: ".section-heading",
+    duration: 0.2,
+    offset: 4
+  });
+  const resultRef = useEntranceMotion({
+    enabled: Boolean(result),
+    activationKey: result?._id || result?.id,
+    duration: 0.24,
+    offset: 6
+  });
 
   const loadDashboardSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -280,12 +300,14 @@ function Dashboard() {
       {error && <p role="alert">{error}</p>}
 
       <PageHeader
+        motion
         title="Dashboard"
         description="Review your learning status, analyze a suspicious URL, and check your analysis history."
       />
 
       <section
         className="dashboard-status"
+        ref={summaryRef}
         aria-label="Your progress"
         aria-busy={summaryLoading}
       >
@@ -441,7 +463,7 @@ function Dashboard() {
         ) : null}
       </section>
 
-      <section id="scanner" className="scanner-section">
+      <section id="scanner" className="scanner-section" ref={scannerRef}>
         <h2>Analyze a URL</h2>
 
         <p>
@@ -470,6 +492,7 @@ function Dashboard() {
       {result && (
         <section
           className="result-section"
+          ref={resultRef}
           aria-labelledby="analysis-result-heading"
         >
           <div className="result-section-heading">
@@ -557,7 +580,7 @@ function Dashboard() {
         </section>
       )}
 
-      <section id="history">
+      <section id="history" ref={historyRef}>
         <div className="section-heading">
           <div>
             <h2>Analysis History</h2>

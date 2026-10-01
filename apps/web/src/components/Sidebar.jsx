@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { getVisibleGroups, isItemActive } from "./navGroups";
+import BrandMark from "./BrandMark";
 
 /*
  * Desktop primary navigation. Persistent grouped sidebar with explicit
@@ -14,7 +15,7 @@ function Sidebar({ role, onLogout }) {
     <aside className="sidebar">
       <div className="sidebar-brand">
         <div className="brand-mark" aria-hidden="true">
-          PG
+          <BrandMark />
         </div>
 
         <div>

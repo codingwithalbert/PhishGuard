@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import BrandMark from "./BrandMark";
 
 /*
  * Compact top header for the authenticated shell.
@@ -84,6 +85,8 @@ function TopHeader({ menuButtonRef, menuOpen, onMenuToggle, role }) {
           />
         </svg>
       </button>
+
+      <BrandMark compact className="topbar-brand-mark" />
 
       <span className="topbar-title">
         {getPageTitle(location.pathname)}

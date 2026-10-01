@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getVisibleGroups, isItemActive } from "./navGroups";
+import BrandMark from "./BrandMark";
 
 /*
  * Mobile/small-screen drawer navigation.
@@ -107,7 +108,7 @@ function MobileNav({ open, onClose, onNavigate, onLogout, role }) {
         <div className="mobile-nav-header">
           <div className="sidebar-brand">
             <div className="brand-mark" aria-hidden="true">
-              PG
+              <BrandMark />
             </div>
             <span className="sidebar-brand-name">PhishGuard</span>
           </div>
