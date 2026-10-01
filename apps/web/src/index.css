@@ -494,7 +494,12 @@ main.auth-main > form button {
 .dashboard-status-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-subtle);
   color: var(--primary);
   font-size: 0.85rem;
   font-weight: 700;
@@ -502,12 +507,20 @@ main.auth-main > form button {
 }
 
 .dashboard-status-link:hover {
-  text-decoration: underline;
+  border-color: var(--color-accent);
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--color-accent-hover);
+  text-decoration: none;
+}
+
+.dashboard-status-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
 }
 
 .dashboard-status-item > .dashboard-status-link {
+  align-self: flex-start;
   margin-top: auto;
-  padding-top: var(--space-3);
 }
 
 .dashboard-recent-panel {
