@@ -38,18 +38,37 @@ unless explicitly instructed.
 
 ## Current Development Phase
 
-- Phase 1 — Final Feature Completion: complete
-- Phase 2 — Feature Freeze & Cleanup: complete
-- Phase 3 — Major UI/UX V1: current
+- Phase 1 — Core Foundation: COMPLETE
+- Phase 2 — Product Features: COMPLETE
+- Phase 3 — Major UI/UX V1: COMPLETE
+- Phase 4 — Security & QA + Final V1 Refinement: CURRENT, near completion
+- Phase 5 — Documentation & Research Readiness: NEXT
+- Phase 6 — V1 Release Candidate: FINAL V1 PHASE
 
-The current `main` branch is the feature-frozen functional baseline.
+Honor the baseline specified by each task; otherwise use the current
+human-reviewed `main` baseline, including approved fixes.
 
-During Major UI/UX V1, existing product behavior and backend/API contracts
+Throughout the remaining V1 phases, existing product behavior and API contracts
 must remain unchanged unless an explicitly approved task says otherwise.
 
-## Major UI/UX V1 Guardrails
+Remaining V1 work is bounded to QA/security refinement, verification,
+documentation/research readiness, release-candidate preparation, and explicitly
+approved fixes. It does not authorize unrelated feature expansion. Optional/V2
+ideas require separate approval. Do not reopen completed UI work without approval.
 
-The following rules apply during the Major UI/UX V1 phase:
+### Resolved Security & QA Checkpoint
+
+These findings are resolved with regression coverage, not outstanding work:
+
+- Research Analytics owner projections corrected — `0676a0b`.
+- Global error logging sanitized — `44d3690`.
+- Audit request paths stripped of query strings — `921f828`.
+
+These commits identify the checkpoint, not a permanent task baseline.
+
+## Continuing V1 Guardrails
+
+The following rules apply throughout the remaining V1 phases:
 
 ### Functional Preservation
 
@@ -73,8 +92,19 @@ The following rules apply during the Major UI/UX V1 phase:
 
 ### Research Analytics
 
+- Preserve the active `role=user` cohort and latest applicable assessment
+  attempts under the approved Research Analytics specification.
+- Preserve participant ownership associations and the corrected projection
+  behavior; do not drop fields required to associate source records with owners.
+- Reuse authoritative fixed three-module Training Exposure semantics.
+- Missing assessment values remain null (blank in CSV); legitimate zero values
+  remain zero.
+- Preserve transient pseudonymous participant IDs and de-identified output.
+- Keep analytics descriptive/exploratory and preserve pairwise-complete Pearson
+  calculations and safely nullable undefined correlations.
 - Research analytics must not imply causation, statistical significance, or
-  predictive validity beyond what the implementation supports.
+  predictive validity beyond what the implementation supports. Correlation does
+  not establish causation.
 
 ### Accessibility and States
 
@@ -97,6 +127,12 @@ The following rules apply during the Major UI/UX V1 phase:
 - Appropriate for a school environment.
 - Approachable for students.
 - Efficient for IT staff/admins.
+- Preserve the existing dark navy/cyan visual system.
+- Avoid generic templated/"AI slop" redesigns.
+
+Existing GSAP motion is sufficient. Three.js remains intentionally limited
+mainly to the auth visual treatment. Preserve reduced-motion behavior and
+static fallbacks; do not add decorative animation merely for polish.
 
 Avoid:
 
@@ -152,13 +188,25 @@ Implemented functionality includes:
 - Report Email Notifications (message and completion notifications)
 - Research Analytics (aggregate statistics and correlations)
 - Admin CSV research export (de-identified)
-- Render deployment configuration
+- Render frontend and backend/API deployment
 
 Backend Staff/Admin authorization tests and protected endpoints remain part of
 the security implementation even when the normal frontend does not expose
 temporary RBAC demonstration controls.
 
 Do not weaken backend authorization merely to make frontend behavior work.
+
+### Established Deployment and Prior Verification
+
+The frontend and backend/API are already deployed on Render. HTTPS has
+previously been verified, and production security smoke checks have previously
+been performed. Missing Render manifests/configuration in the repository are
+not evidence that the application is undeployed.
+
+Prior verification also includes a broader backend suite with intentional
+opt-in integration skips, frontend lint/build passes, backend/frontend npm
+audits reporting zero vulnerabilities, and a verification harness PASS. This
+is historical project evidence, not fresh verification by the current task.
 
 ## Current Product Boundaries
 
@@ -169,7 +217,9 @@ Implemented learning variables include:
 - Training Exposure
 
 Training Exposure is based on explicit completion of the fixed PhishGuard
-training modules.
+training modules. Completion and exposure are backend-authoritative; completion
+must result from explicit server-side completion actions, never merely viewing
+content, timers, animation, or frontend/local state.
 
 When discussing relationships among research variables, describe statistical
 relationships as associations unless the research design supports a causal
@@ -177,7 +227,10 @@ claim.
 
 ## URL Analysis
 
-The URL Analyzer is heuristic.
+The URL Analyzer performs deterministic heuristic lexical/structural URL
+analysis. It does not use external reputation/threat-intelligence lookup unless
+separately approved and implemented. Its score is not an ML probability or
+confidence value.
 
 Do not describe:
 
@@ -202,11 +255,13 @@ Do not trust the frontend to determine:
 - object ownership
 - privileged roles
 - assessment scores
+- Training completion
 - Training Exposure
 - URL-analysis scores or risk classifications
 
 The frontend may present backend results but must not silently recreate
-authoritative business rules.
+authoritative business rules. Awareness and Phishing Identification scoring
+remain backend-authoritative.
 
 ## Security Rules
 
@@ -233,6 +288,13 @@ authentication design.
 
 Public registration must not allow users to assign themselves privileged
 Staff or Admin roles.
+
+Global unexpected-error diagnostics are intentionally sanitized. Do not
+reintroduce raw error-object logging that may expose messages, stacks, bodies,
+request data, secrets, or other sensitive values. Audit events intentionally
+record query-free request paths; do not reintroduce arbitrary query-string
+logging or mutate request URLs/routing state to sanitize logs. Client-facing
+errors must remain safe/sanitized.
 
 ## External Services and Cost
 
@@ -261,6 +323,9 @@ report the conflict before making that decision.
 
 ## Development Workflow
 
+Commands must be compatible with Windows PowerShell. Do not use `&&` or `||`
+in PowerShell commands; use separate commands or semicolons where appropriate.
+
 Before changing code:
 
 1. Inspect the relevant existing files.
@@ -270,9 +335,16 @@ Before changing code:
 5. Make the smallest coherent change that satisfies the task.
 6. Avoid unrelated refactors.
 
-After backend changes, run the relevant backend tests.
+After backend changes, run the relevant backend tests within the authorized
+scope. Inspect what test commands execute before running them: backend test
+discovery includes live API/database-dependent suites.
 
-Standard backend verification (Windows PowerShell):
+For bounded tasks, prefer relevant isolated tests that require no live
+API/database or production access. Live MongoDB, running-API, production, or
+environment-dependent verification requires explicit authorization and a
+known-safe environment. Never access secrets or `.env` merely to make tests run.
+
+Full backend verification command (only when its environment/scope is approved):
 
 `cd apps/api`
 `npm test`
@@ -287,32 +359,35 @@ and:
 `cd apps/web`
 `npm run build`
 
-For full-stack changes, run both backend and frontend verification.
+For full-stack changes, run both backend and frontend verification within the
+same safety and authorization boundaries. Documentation-only changes normally
+need diff review and whitespace checks, not application tests.
 
 Run `git diff --check` before recommending that changes are committed.
 
 Do not claim a change works unless it has been verified, or clearly state
 what remains unverified.
 
+Report the exact commands, scope, pass/fail/skip counts, and what was not run.
+Historical results must not be represented as current-task execution.
+Differently scoped counts are not automatically contradictions; describe
+intentional opt-in integration skips accurately, not as executed passing tests.
+
 ## Git Rules
 
-Do not run `git push`.
-
-Do not create commits unless explicitly instructed.
-
-Do not stage files unless explicitly instructed.
+Staging, committing, pushing, and deployment each require explicit authorization
+for that specific step under the approval workflow below. Never perform these
+independently. Deployment authorization is separate from commit/push approval.
 
 Do not rewrite Git history.
 
 Do not use destructive Git commands.
 
-The human developer reviews diffs and decides what is staged, committed, and
-pushed.
+Do not delete branches or force-push.
 
 Use `git status` and `git diff` for inspection when useful.
 
-Treat the current human-reviewed `main` branch as the development baseline
-unless the task explicitly identifies another baseline.
+Honor the task-specified baseline; otherwise use current human-reviewed `main`.
 
 ## Coding Guidelines
 
@@ -328,7 +403,8 @@ Perform input validation before business logic where appropriate.
 Keep authorization enforcement on the backend even when the frontend also
 hides or disables controls.
 
-Avoid unnecessary dependencies.
+Avoid unnecessary dependencies. Package installation outside the approved task
+requires explicit approval; do not install packages merely to make progress.
 
 Do not perform large rewrites when a focused change is sufficient.
 
@@ -342,6 +418,23 @@ practical.
 
 You are operating as a coding agent under human supervision.
 
+Canonical approval workflow:
+
+1. ChatGPT/user scopes and approves a task.
+2. OpenCode performs only the bounded task.
+3. The user returns output/diff/tests to ChatGPT.
+4. ChatGPT reviews and explicitly decides whether staging is appropriate.
+5. The authorized staged set is verified.
+6. ChatGPT explicitly decides whether a commit is appropriate.
+7. The authorized commit and resulting status are verified.
+8. ChatGPT explicitly decides whether a push is appropriate.
+
+Task completion does not authorize any later step. Deployment requires its own
+explicit authorization. OpenCode must not independently stage, commit, push,
+deploy, rewrite history, delete branches, perform destructive Git operations,
+access secrets, expand scope, install unnecessary dependencies, or fix unrelated
+findings. Report unrelated findings separately rather than making extra fixes.
+
 For each development task:
 
 1. Inspect before editing.
@@ -352,7 +445,8 @@ For each development task:
 6. Report files changed.
 7. Report tests, lint, or build results.
 8. Report remaining risks or assumptions.
-9. Wait for human review before any commit or deployment.
+9. Stop for human/ChatGPT review and separate authorization of any staging,
+   commit, push, or deployment step.
 
 Do not use subagents unless explicitly requested.
 
