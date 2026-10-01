@@ -203,17 +203,17 @@ async function buildResearchParticipantDataset({
   ] = await Promise.all([
     awarenessModel
       .find({ user: { $in: userIds } })
-      .select({ score: 1, completedAt: 1 })
+      .select({ user: 1, score: 1, completedAt: 1 })
       .sort(LATEST_ATTEMPT_SORT)
       .lean(),
     phishingIdentificationModel
       .find({ user: { $in: userIds } })
-      .select({ score: 1, completedAt: 1 })
+      .select({ user: 1, score: 1, completedAt: 1 })
       .sort(LATEST_ATTEMPT_SORT)
       .lean(),
     trainingCompletionModel
       .find({ user: { $in: userIds }, moduleId: { $in: TRAINING_MODULE_IDS } })
-      .select({ moduleId: 1 })
+      .select({ user: 1, moduleId: 1 })
       .lean()
   ]);
 

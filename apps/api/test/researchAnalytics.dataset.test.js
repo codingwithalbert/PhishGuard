@@ -16,8 +16,8 @@ const {
 } = require("../src/services/training.service");
 
 // Minimal in-memory stand-in for the authoritative Mongoose models. It really
-// applies the filter and the sort so the deterministic ordering guarantees of
-// the dataset are exercised rather than assumed.
+// applies filtering, sorting, and inclusion projections so dataset ownership
+// and deterministic ordering are exercised rather than assumed.
 function matchesFilter(document, filter) {
   return Object.entries(filter).every(([field, condition]) => {
     if (
@@ -123,9 +123,12 @@ function createFakeModel(documents = [], { applyFilter = true } = {}) {
         );
       }
 
+      let selectedFields;
+
       const query = {
         select(projection) {
           state.selects.push(projection);
+          selectedFields = projection;
           return query;
         },
 
@@ -140,7 +143,19 @@ function createFakeModel(documents = [], { applyFilter = true } = {}) {
         },
 
         then(onFulfilled, onRejected) {
-          return Promise.resolve(matched).then(onFulfilled, onRejected);
+          // MongoDB filters/sorts source records before returning projected
+          // fields. Inclusion keeps _id by default, but not an omitted owner.
+          const projected = selectedFields
+            ? matched.map((document) => Object.fromEntries(
+              Object.entries(document).filter(([field]) =>
+                field === "_id"
+                  ? selectedFields._id !== 0
+                  : selectedFields[field] === 1
+              )
+            ))
+            : matched;
+
+          return Promise.resolve(projected).then(onFulfilled, onRejected);
         }
       };
 
@@ -348,6 +363,75 @@ test("the latest phishing identification attempt is selected deterministically",
   assert.deepEqual(harness.phishingModel.state.sorts, [
     { completedAt: -1, _id: -1 }
   ]);
+});
+
+for (const [collection, scoreField, completedAtField] of [
+  ["awareness", "awarenessScore", "awarenessCompletedAt"],
+  ["phishing", "phishingIdentificationScore", "phishingIdentificationCompletedAt"]
+]) {
+  test(`${collection} inclusion projection preserves ownership, latest results, and zero scores`, async () => {
+    const first = createUser({ createdAt: new Date("2026-01-01T00:00:00.000Z") });
+    const second = createUser({ createdAt: new Date("2026-01-02T00:00:00.000Z") });
+    const missing = createUser({ createdAt: new Date("2026-01-03T00:00:00.000Z") });
+    const older = new Date("2026-02-01T00:00:00.000Z");
+    const latest = new Date("2026-03-01T00:00:00.000Z");
+    const harness = buildHarness({
+      users: [second, missing, first],
+      [collection]: [
+        createAwareness({ user: second._id, score: 70, completedAt: latest }),
+        createAwareness({ user: first._id, score: 90, completedAt: older }),
+        createAwareness({ user: first._id, score: 0, completedAt: latest })
+      ]
+    });
+
+    const participants = await buildResearchParticipantDataset(harness.models);
+
+    assert.deepEqual(participants.map((participant) => [
+      participant.participantId,
+      participant[scoreField],
+      participant[completedAtField]
+    ]), [
+      ["PG-R0001", 0, latest],
+      ["PG-R0002", 70, latest],
+      ["PG-R0003", null, null]
+    ]);
+    for (const participant of participants) {
+      assert.equal(Object.hasOwn(participant, "user"), false);
+      assert.equal(Object.hasOwn(participant, "_id"), false);
+    }
+  });
+}
+
+test("training inclusion projection preserves each owner's distinct fixed-module completions", async () => {
+  const first = createUser({ createdAt: new Date("2026-01-01T00:00:00.000Z") });
+  const second = createUser({ createdAt: new Date("2026-01-02T00:00:00.000Z") });
+  const missing = createUser({ createdAt: new Date("2026-01-03T00:00:00.000Z") });
+  const harness = buildHarness({
+    users: [second, missing, first],
+    training: [
+      createTrainingCompletion({ user: second._id, moduleId: 3 }),
+      createTrainingCompletion({ user: first._id, moduleId: 1 }),
+      createTrainingCompletion({ user: first._id, moduleId: 2 }),
+      createTrainingCompletion({ user: first._id, moduleId: 2 }),
+      createTrainingCompletion({ user: first._id, moduleId: 4 })
+    ]
+  });
+
+  const participants = await buildResearchParticipantDataset(harness.models);
+
+  assert.deepEqual(participants.map((participant) => [
+    participant.participantId,
+    participant.completedTrainingModules,
+    participant.trainingExposure
+  ]), [
+    ["PG-R0001", 2, 66.67],
+    ["PG-R0002", 1, 33.33],
+    ["PG-R0003", 0, 0]
+  ]);
+  for (const participant of participants) {
+    assert.equal(Object.hasOwn(participant, "user"), false);
+    assert.equal(Object.hasOwn(participant, "_id"), false);
+  }
 });
 
 test("missing assessment data stays null while training exposure 0 is measured", async () => {
