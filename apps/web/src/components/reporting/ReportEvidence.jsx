@@ -22,7 +22,8 @@ function getIndicators(evidence) {
   );
 }
 
-function ReportEvidence({ analysisSnapshot }) {
+function ReportEvidence({ analysisSnapshot, headingLevel = 3 }) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   const evidence =
     analysisSnapshot && typeof analysisSnapshot === "object"
       ? analysisSnapshot
@@ -35,12 +36,12 @@ function ReportEvidence({ analysisSnapshot }) {
 
   return (
     <div className="report-evidence">
-      <h3>
+      <Heading>
         PhishGuard automated analysis
         <span className="report-section-badge report-section-badge-automated">
           Automated
         </span>
-      </h3>
+      </Heading>
 
       <div className="analysis-context">
         <p className="analysis-heuristic-note">

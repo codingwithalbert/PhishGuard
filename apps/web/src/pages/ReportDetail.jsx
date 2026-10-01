@@ -249,7 +249,7 @@ function ReportDetailPage() {
 
   return (
     <main
-      className="reports-page report-detail-page"
+      className="reports-page student-reporting report-detail-page"
       id="main-content"
       aria-busy={loading}
     >
@@ -288,26 +288,30 @@ function ReportDetailPage() {
           <section className="report-detail-header">
             <Link to="/reports">Back to Reports</Link>
 
-            <span className="report-ticket-label">Ticket number</span>
-            <h1 className="report-ticket-number">
-              {report.ticketNumber}
-            </h1>
+            <div className="report-ticket-heading">
+              <div>
+                <span className="report-ticket-label">Ticket number</span>
+                <h1 className="report-ticket-number">
+                  {report.ticketNumber}
+                </h1>
+              </div>
 
-            <span className={getStatusClassName(report.status)}>
-              {getReportStatusLabel(report.status)}
-            </span>
+              <span className={getStatusClassName(report.status)}>
+                {getReportStatusLabel(report.status)}
+              </span>
+            </div>
           </section>
 
           <section className="report-detail-section">
             <h2>Report submission</h2>
 
-            <dl className="report-detail-grid">
+            <dl className="report-detail-grid report-submission-grid">
               <div>
                 <dt>Reason</dt>
                 <dd>{getReportReasonLabel(report.reason)}</dd>
               </div>
 
-              <div>
+              <div className="report-text-field">
                 <dt>Initial details</dt>
                 <dd>
                   {report.details ||
@@ -326,11 +330,11 @@ function ReportDetailPage() {
             </dl>
           </section>
 
-          <section className="report-detail-section">
-            <ReportEvidence analysisSnapshot={report.analysisSnapshot} />
+          <section className="report-detail-section report-automated-section">
+            <ReportEvidence analysisSnapshot={report.analysisSnapshot} headingLevel={2} />
           </section>
 
-          <section className="report-detail-section">
+          <section className="report-detail-section report-human-review">
             <h2>
               IT review state
               <span className="report-section-badge report-section-badge-human">
@@ -339,24 +343,24 @@ function ReportDetailPage() {
             </h2>
 
             <dl className="report-detail-grid">
-              <div>
+              <div className="report-review-key-field">
                 <dt>Workflow status</dt>
                 <dd>{getReportStatusLabel(report.status)}</dd>
               </div>
 
-              <div>
+              <div className="report-review-key-field">
                 <dt>IT Priority</dt>
                 <dd>{getReportPriorityLabel(report.priority)}</dd>
               </div>
 
-              <div>
+              <div className="report-review-key-field">
                 <dt>IT Assessment</dt>
                 <dd>
                   {getReportAssessmentLabel(report.assessment)}
                 </dd>
               </div>
 
-              <div>
+              <div className="report-review-key-field">
                 <dt>Assigned IT staff</dt>
                 <dd>
                   {getUserReferenceText(
@@ -366,7 +370,7 @@ function ReportDetailPage() {
                 </dd>
               </div>
 
-              <div>
+              <div className="report-review-meta-field">
                 <dt>Final reviewer</dt>
                 <dd>
                   {getUserReferenceText(
@@ -376,18 +380,18 @@ function ReportDetailPage() {
                 </dd>
               </div>
 
-              <div>
-                <dt>Reviewer note</dt>
-                <dd>{getReviewerNoteText(report)}</dd>
-              </div>
-
-              <div>
+              <div className="report-review-meta-field">
                 <dt>Reviewed at</dt>
                 <dd>
                   {report.reviewedAt
                     ? formatReportingDate(report.reviewedAt)
                     : "Not available"}
                 </dd>
+              </div>
+
+              <div className="report-review-meta-field report-text-field">
+                <dt>Reviewer note</dt>
+                <dd>{getReviewerNoteText(report)}</dd>
               </div>
             </dl>
           </section>

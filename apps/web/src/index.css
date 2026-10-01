@@ -3032,6 +3032,285 @@ main.auth-main > form button {
   }
 }
 
+/* Student-facing reporting only. Shared evidence/thread markup also serves
+   IT Review, so never apply these refinements outside student-reporting. */
+
+.student-reporting .reports-list-section {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.student-reporting .reports-list {
+  gap: var(--space-5);
+}
+
+.student-reporting .report-card {
+  display: grid;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.student-reporting .report-card-heading > div,
+.student-reporting .report-ticket-heading > div {
+  min-width: 0;
+}
+
+.student-reporting .report-card-url {
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-strong);
+  font-size: 1rem;
+}
+
+.student-reporting .report-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  gap: var(--space-4) var(--space-5);
+}
+
+.student-reporting .report-summary-grid > div,
+.student-reporting .report-detail-grid > div {
+  display: grid;
+  align-items: start;
+  justify-content: normal;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.student-reporting .report-summary-grid dd,
+.student-reporting .report-detail-grid dd {
+  text-align: left;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.student-reporting .report-card-action {
+  justify-self: end;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: var(--space-5);
+}
+
+.student-reporting .report-detail-header {
+  padding: var(--space-4) var(--space-5);
+}
+
+.student-reporting .report-detail-header > a {
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: var(--space-2);
+}
+
+.student-reporting .report-ticket-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.student-reporting .report-detail-header .report-ticket-number {
+  margin: var(--space-1) 0 0;
+}
+
+.student-reporting .report-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.student-reporting .report-detail-grid .report-text-field {
+  grid-column: 1 / -1;
+}
+
+.student-reporting .report-submission-grid .report-text-field {
+  grid-row: 2;
+}
+
+.student-reporting .report-text-field dd {
+  white-space: pre-wrap;
+  font-weight: 400;
+}
+
+.student-reporting .report-human-review .report-review-key-field {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunken);
+}
+
+.student-reporting .report-review-key-field dd {
+  color: var(--color-text-strong);
+  font-weight: 700;
+}
+
+.student-reporting .report-review-meta-field dd {
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.student-reporting .report-automated-section {
+  border-color: var(--color-border-strong);
+}
+
+.student-reporting .report-evidence > h2,
+.student-reporting .report-evidence > h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-size: 1.1rem;
+}
+
+.student-reporting .report-section-badge {
+  margin-left: 0;
+}
+
+.student-reporting .report-human-review > h2 {
+  gap: var(--space-2);
+}
+
+.student-reporting .report-evidence .analysis-context {
+  margin: 0 0 var(--space-4);
+  border-color: var(--color-border-strong);
+  background: var(--color-accent-subtle);
+}
+
+.student-reporting .report-evidence .result-summary {
+  background: var(--color-sunken);
+}
+
+.student-reporting .report-evidence .result-metrics {
+  justify-content: flex-start;
+  gap: var(--space-3) var(--space-6);
+}
+
+.student-reporting .report-evidence .finding-item-heading {
+  flex-wrap: wrap;
+}
+
+.student-reporting .report-evidence .finding-item h4,
+.student-reporting .report-evidence .finding-item p,
+.student-reporting .report-evidence .analysis-indicators li {
+  overflow-wrap: anywhere;
+}
+
+.student-reporting .report-create-form {
+  gap: var(--space-5);
+}
+
+.student-reporting .report-form-field {
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.student-reporting .report-form-reminder,
+.student-reporting .report-thread-reminder {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-subtle);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.student-reporting .report-create-actions {
+  padding-top: var(--space-5);
+}
+
+.student-reporting .report-create-actions button,
+.student-reporting .report-thread-form button {
+  min-height: 44px;
+}
+
+.student-reporting .report-thread {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.student-reporting .report-thread > h3 {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+}
+
+.student-reporting .report-thread-empty {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunken);
+}
+
+.student-reporting .report-message-list {
+  gap: var(--space-3);
+}
+
+.student-reporting .report-message {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--color-sunken);
+}
+
+.student-reporting .report-message-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-2) var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.student-reporting .report-message-heading time {
+  text-align: right;
+}
+
+.student-reporting .report-thread-form {
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-5) 0 0;
+  border-top-color: var(--color-border-strong);
+}
+
+@media (max-width: 720px) {
+  .student-reporting .report-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-reporting .report-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-reporting .report-submission-grid .report-text-field {
+    grid-row: auto;
+  }
+
+  .student-reporting .report-message-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .student-reporting .report-message-heading time {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .student-reporting .report-card-action,
+  .student-reporting .report-thread-form button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .student-reporting .report-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .review-page {
   width: min(1200px, calc(100% - 2rem));
 }

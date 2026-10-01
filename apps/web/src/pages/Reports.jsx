@@ -124,7 +124,7 @@ function ReportsPage() {
   }, [loadReports]);
 
   return (
-    <main className="reports-page" id="main-content" aria-busy={loading}>
+    <main className="reports-page student-reporting" id="main-content" aria-busy={loading}>
       <PageHeader
         title="Reports"
         description={

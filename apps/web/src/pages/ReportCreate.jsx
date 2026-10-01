@@ -213,7 +213,7 @@ function ReportCreatePage() {
 
   return (
     <main
-      className="reports-page report-create-page"
+      className="reports-page student-reporting report-create-page"
       id="main-content"
       aria-busy={loading}
     >
@@ -281,7 +281,7 @@ function ReportCreatePage() {
             </section>
           )}
 
-          <section className="report-create-section">
+          <section className="report-create-section report-automated-section">
             <h2>Analysis being reported</h2>
 
             <ReportEvidence analysisSnapshot={analysis} />
@@ -325,8 +325,9 @@ function ReportCreatePage() {
                   onChange={(event) => setDetails(event.target.value)}
                   maxLength={500}
                   disabled={submitting}
+                  aria-describedby="report-details-security-note"
                 />
-                <p className="report-form-reminder">
+                <p className="report-form-reminder" id="report-details-security-note">
                   Do not include passwords, MFA codes, authentication tokens,
                   or other authentication secrets.
                 </p>
