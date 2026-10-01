@@ -3,7 +3,7 @@ function auditLog(event, req, details = {}) {
     timestamp: new Date().toISOString(),
     event,
     method: req.method,
-    path: req.originalUrl,
+    path: req.originalUrl.split("?", 1)[0],
     userId: req.user?.userId || null,
     role: req.user?.role || null,
     ...details

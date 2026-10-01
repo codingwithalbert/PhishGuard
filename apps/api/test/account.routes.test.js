@@ -10,6 +10,7 @@ const accountController = require("../src/controllers/account.controller");
 const authController = require("../src/controllers/auth.controller");
 const authRoutes = require("../src/routes/auth.routes");
 const errorHandler = require("../src/middleware/error.middleware");
+const { auditLog } = require("../src/middleware/audit.middleware");
 const {
   authenticate
 } = require("../src/middleware/auth.middleware");
@@ -745,6 +746,95 @@ test("the failed password verification audit entry is safe", async () => {
 
   for (const entry of entries) {
     assertNoSecretAuditMetadata(entry);
+  }
+});
+
+test("audit paths exclude queries without changing request URLs or safe metadata", async () => {
+  const marker = "synthetic-query-private-value";
+  const encoded = "%73%79%6e%74%68%65%74%69%63%2D%65%6E%63%6F%64%65%64";
+  for (const [originalUrl, expectedPath] of [
+    ["/api/auth/login", "/api/auth/login"],
+    ["/api/auth/reset-password?", "/api/auth/reset-password"],
+    [`/api/auth/login?password=${marker}&token=${marker}&token=${encoded}?email=${marker}`, "/api/auth/login"],
+    [`/api/auth/forgot-password?email=${encoded}&url=${marker}`, "/api/auth/forgot-password"],
+    ["/api/auth/profile%3Funchanged%2Fpath", "/api/auth/profile%3Funchanged%2Fpath"]
+  ]) {
+    const req = {
+      method: "POST",
+      originalUrl,
+      url: originalUrl.slice("/api/auth".length),
+      baseUrl: "/api/auth",
+      route: { path: "/login" },
+      params: {},
+      user: { userId: String(USER_ID), role: "user" },
+      body: { password: CURRENT_PASSWORD, token: marker },
+      headers: { authorization: `Bearer ${marker}` }
+    };
+    const before = structuredClone(req);
+    const entries = await captureAuditLogs(() => {
+      auditLog("LOGIN_FAILED", req, { reason: "invalid_credentials" });
+    });
+
+    assert.equal(entries.length, 1);
+    const [entry] = entries;
+    assert.deepEqual(entry, {
+      timestamp: entry.timestamp,
+      event: "LOGIN_FAILED",
+      method: "POST",
+      path: expectedPath,
+      userId: String(USER_ID),
+      role: "user",
+      reason: "invalid_credentials"
+    });
+    assert.equal(Number.isNaN(Date.parse(entry.timestamp)), false);
+    assert.deepEqual(req, before);
+    assertNoSecretAuditMetadata(entry);
+    const output = JSON.stringify(entries);
+    for (const forbidden of [marker, encoded, decodeURIComponent(encoded)]) {
+      assert.equal(output.includes(forbidden), false, "Query values must not reach audit output");
+    }
+  }
+});
+
+test("query-bearing account requests preserve responses and sanitized audit events", async () => {
+  const marker = "synthetic-account-query-value";
+  const query = `?token=${marker}&token=%73%65%63%72%65%74&email=${marker}?password=${marker}`;
+  const headers = authHeaders(USER_ID);
+  for (const [path, method, body, event, status, expectedBody, failure] of [
+    ["/api/auth/profile", "PATCH", { name: "Updated Name" }, "PROFILE_UPDATED", 200,
+      { success: true, user: { ...SAFE_PROFILE, id: String(USER_ID) } }, false],
+    ["/api/auth/change-password", "POST", { currentPassword: CURRENT_PASSWORD, newPassword: NEW_PASSWORD },
+      "PASSWORD_CHANGED", 200, { success: true, message: "Password changed successfully." }, false],
+    ["/api/auth/change-password", "POST", { currentPassword: CURRENT_PASSWORD, newPassword: NEW_PASSWORD },
+      "PASSWORD_CHANGE_FAILED", 401, { success: false, error: "Current password is incorrect" }, true]
+  ]) {
+    resetState();
+    if (failure) {
+      state.passwordError = new AccountServiceError(
+        ACCOUNT_ERROR_CODES.INCORRECT_CURRENT_PASSWORD, "Current password is incorrect", 401
+      );
+    }
+    const entries = await captureAuditLogs(async () => {
+      const response = await send(`${path}${query}`, method, body, headers);
+      assert.equal(response.status, status);
+      assertNoStore(response);
+      assert.deepEqual((await readJson(response)).data, expectedBody);
+    });
+
+    assert.equal(state.calls.length, 1);
+    assert.equal(entries.length, 1);
+    const [entry] = entries;
+    assert.equal(entry.path, path);
+    assert.equal(entry.event, event);
+    assert.equal(entry.method, method);
+    assert.equal(entry.userId, String(USER_ID));
+    assert.equal(entry.role, "user");
+    assert.equal(entry.reason, failure ? "invalid_current_password" : undefined);
+    assertNoSecretAuditMetadata(entry);
+    const output = JSON.stringify(entries);
+    for (const forbidden of [marker, "%73%65%63%72%65%74", "secret", headers.Authorization]) {
+      assert.equal(output.includes(forbidden), false, "Query or header values must not reach audit output");
+    }
   }
 });
 
