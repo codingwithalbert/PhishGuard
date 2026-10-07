@@ -19,6 +19,35 @@ const User = require("../models/User");
 // authorization window this middleware exists to close.
 const USER_STATE_PROJECTION = { _id: 1, role: 1, isActive: 1 };
 
+// Same fixed diagnostic vocabulary the global error handler uses, so a thrown
+// error is classified by `instanceof` rather than by its own `name`, which an
+// upstream library or a crafted error controls.
+const DIAGNOSTIC_ERROR_TYPES = [
+  TypeError, RangeError, ReferenceError, SyntaxError, URIError, EvalError, Error
+];
+
+// One sanitized line, emitted only when the current-user lookup throws. The
+// client-facing response stays the same generic rejection as an invalid token,
+// so this line is the only way an operator can tell an infrastructure failure
+// apart from a credential problem.
+//
+// Only fixed metadata is logged. Error messages, stacks, names, codes, causes,
+// connection strings, hosts, database names, filters, user identifiers, tokens,
+// and request metadata must never be serialized here.
+function logCurrentUserLookupFailure(err) {
+  const errorType = DIAGNOSTIC_ERROR_TYPES.find(
+    (ErrorType) => err instanceof ErrorType
+  );
+
+  console.error("[AUTH]", JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event: "AUTH_CURRENT_USER_LOOKUP_FAILED",
+    category: "current_user_lookup_failure",
+    errorType: errorType ? errorType.name : "Unknown",
+    status: 403
+  }));
+}
+
 // Matches the existing strict ObjectId pattern in
 // middleware/reporting.validate.middleware.js. The hexadecimal shape test is
 // required because mongoose `isValid` alone also accepts any 12-character
@@ -76,9 +105,12 @@ function createAuthenticate({ userModel = User } = {}) {
       user = await userModel
         .findById(decoded.userId)
         .select(USER_STATE_PROJECTION);
-    } catch {
-      // An unexpected database failure must not leak database detail or
-      // account state, so it is reported as the same safe 403.
+    } catch (error) {
+      // The generic rejection stays identical so no database or account state
+      // reaches the client. Only fixed, sanitized metadata is logged so an
+      // infrastructure failure is still visible to operators.
+      logCurrentUserLookupFailure(error);
+
       return rejectToken();
     }
 

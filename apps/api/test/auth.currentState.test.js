@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const http = require("node:http");
+const { format } = require("node:util");
 const express = require("express");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
@@ -613,6 +614,222 @@ test("an unexpected database failure is reported as a safe 403 without leaking d
       local.close(resolve);
     });
   }
+});
+
+// Builds a User model whose findById rejects with a deliberately
+// sensitive-looking error, so the negative logging assertions are meaningful.
+function createExplodingUserModel(thrownError) {
+  return {
+    findById() {
+      return {
+        select() {
+          // A real rejected promise, so `await` settles and the middleware's
+          // own try/catch runs.
+          return Promise.reject(thrownError);
+        }
+      };
+    }
+  };
+}
+
+const SENSITIVE_ERROR_MARKER = "mongodb+srv://user:pa55w0rd@db.internal.invalid/phishguard";
+
+function createSensitiveLookupError() {
+  const error = new TypeError(
+    `MongoNetworkError: connection to ${SENSITIVE_ERROR_MARKER} timed out`
+  );
+
+  // An attacker-influenced name must not reach the diagnostic verbatim.
+  error.name = "AttackerControlledErrorName";
+  error.code = 6;
+  error.hostName = "db.internal.invalid";
+  error.databaseName = "phishguard";
+  error.filter = { user: "507f1f77bcf86cd799439011" };
+  error.credentials = { password: "pa55w0rd" };
+
+  return error;
+}
+
+async function runLookupFailureRequest(t, thrownError) {
+  const captured = [];
+  t.mock.method(console, "error", (...args) => {
+    captured.push(args);
+  });
+
+  const app = express();
+  let handlerCalls = 0;
+
+  app.get(
+    "/x",
+    createAuthenticate({ userModel: createExplodingUserModel(thrownError) }),
+    (req, res) => {
+      handlerCalls += 1;
+      return res.status(200).json({ success: true });
+    }
+  );
+  app.use(errorHandler);
+
+  const local = http.createServer(app);
+  await new Promise((resolve) => {
+    local.listen(0, "127.0.0.1", resolve);
+  });
+
+  try {
+    const userId = new mongoose.Types.ObjectId();
+    const token = signToken({ userId: userId.toString(), role: "user" });
+    const response = await fetch(
+      `http://127.0.0.1:${local.address().port}/x`,
+      { headers: authHeaders(token) }
+    );
+
+    return {
+      status: response.status,
+      text: await response.text(),
+      captured,
+      handlerCalls,
+      userId: userId.toString(),
+      token
+    };
+  } finally {
+    await new Promise((resolve) => {
+      local.close(resolve);
+    });
+  }
+}
+
+function parseAuthDiagnostics(captured) {
+  return captured
+    .filter((args) => format(...args).startsWith("[AUTH] "))
+    .map((args) => JSON.parse(format(...args).slice("[AUTH] ".length)));
+}
+
+test("a current-user lookup failure keeps the generic 403 and logs one sanitized diagnostic", async (t) => {
+  const thrownError = createSensitiveLookupError();
+  const result = await runLookupFailureRequest(t, thrownError);
+
+  // 1. The client contract is unchanged: same status, same generic body.
+  assert.equal(result.status, 403);
+  assert.deepEqual(JSON.parse(result.text), {
+    success: false,
+    error: INVALID_TOKEN_MESSAGE
+  });
+
+  // 2. The protected handler never runs.
+  assert.equal(result.handlerCalls, 0);
+
+  // 3. Exactly one diagnostic is emitted.
+  assert.equal(result.captured.length, 1);
+
+  const diagnostics = parseAuthDiagnostics(result.captured);
+
+  assert.equal(diagnostics.length, 1);
+  const diagnostic = diagnostics[0];
+
+  // 4. It identifies the condition with fixed metadata only.
+  assert.deepEqual(Object.keys(diagnostic).sort(), [
+    "category",
+    "errorType",
+    "event",
+    "status",
+    "timestamp"
+  ]);
+  assert.equal(diagnostic.event, "AUTH_CURRENT_USER_LOOKUP_FAILED");
+  assert.equal(diagnostic.category, "current_user_lookup_failure");
+  assert.equal(diagnostic.status, 403);
+  assert.equal(Number.isNaN(Date.parse(diagnostic.timestamp)), false);
+
+  // The error type is normalized through `instanceof`, never the raw name.
+  assert.equal(diagnostic.errorType, "TypeError");
+
+  // 5. Nothing sensitive reached the response or the log.
+  const logged = result.captured.map((args) => format(...args)).join("\n");
+
+  for (const forbidden of [
+    SENSITIVE_ERROR_MARKER,
+    "MongoNetworkError",
+    "MongoNetwork",
+    "10.0.0.5",
+    "db.internal.invalid",
+    "phishguard",
+    "pa55w0rd",
+    "AttackerControlledErrorName",
+    result.userId,
+    result.token,
+    "Bearer",
+    "Authorization"
+  ]) {
+    assert.equal(logged.includes(forbidden), false, forbidden);
+    assert.equal(result.text.includes(forbidden), false, forbidden);
+  }
+
+  // No stack, and no arbitrary error property was serialized.
+  assert.equal(logged.includes(" at "), false);
+  assert.equal(/\bcode\b/.test(logged), false);
+  assert.equal(/\bfilter\b/.test(logged), false);
+  assert.equal(/\bcredentials\b/.test(logged), false);
+  assert.equal(/\bhostName\b/.test(logged), false);
+});
+
+test("a non-Error thrown value still yields a normalized Unknown diagnostic", async (t) => {
+  const result = await runLookupFailureRequest(t, { secret: "synthetic-payload" });
+  const diagnostics = parseAuthDiagnostics(result.captured);
+
+  assert.equal(result.status, 403);
+  assert.equal(result.handlerCalls, 0);
+  assert.equal(diagnostics.length, 1);
+  assert.equal(diagnostics[0].errorType, "Unknown");
+  assert.equal(
+    format(...result.captured[0]).includes("synthetic-payload"),
+    false
+  );
+});
+
+test("an invalid or expired JWT does not emit the lookup-failure diagnostic", async (t) => {
+  const captured = [];
+  t.mock.method(console, "error", (...args) => {
+    captured.push(args);
+  });
+
+  const harness = createHarness({ usersById: {} });
+  const expiredToken = signToken(
+    {
+      userId: new mongoose.Types.ObjectId().toString(),
+      role: "user",
+      exp: 1
+    },
+    { noTimestamp: true }
+  );
+
+  const expired = await serve(harness, "/protected", {
+    headers: authHeaders(expiredToken)
+  });
+
+  assert.equal(expired.status, 403);
+  assert.deepEqual(expired.body, {
+    success: false,
+    error: INVALID_TOKEN_MESSAGE
+  });
+  assert.equal(harness.fake.lookups.length, 0);
+  assert.equal(harness.protectedHandlerCalls, 0);
+
+  const forged = await serve(harness, "/protected", {
+    headers: authHeaders(
+      jwt.sign(
+        { userId: new mongoose.Types.ObjectId().toString(), role: "admin" },
+        crypto.randomBytes(32).toString("hex")
+      )
+    )
+  });
+
+  assert.equal(forged.status, 403);
+
+  const missing = await serve(harness, "/protected");
+
+  assert.equal(missing.status, 401);
+
+  // Credential rejections are silent by design; only a lookup failure is logged.
+  assert.equal(captured.length, 0);
+  assert.deepEqual(parseAuthDiagnostics(captured), []);
 });
 
 test("no User caching is introduced: two requests each perform their own lookup", async () => {
