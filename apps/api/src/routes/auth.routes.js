@@ -1,7 +1,8 @@
 const express = require("express");
 
 const {
-  loginLimiter
+  loginLimiter,
+  registerLimiter
 } = require("../middleware/rateLimit.middleware");
 const {
   register,
@@ -30,7 +31,14 @@ const passwordResetRoutes = require("./passwordReset.routes");
 
 const router = express.Router();
 
-router.post("/register", validateRegistration, register);
+// The registration limiter runs before validation so a blocked caller never
+// reaches the bcrypt hash or account creation.
+router.post(
+  "/register",
+  registerLimiter,
+  validateRegistration,
+  register
+);
 router.post("/login", loginLimiter, validateLogin, login);
 router.get("/me", authenticate, getMe);
 
