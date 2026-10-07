@@ -4,6 +4,27 @@ const http = require("node:http");
 const { format } = require("node:util");
 const express = require("express");
 const errorHandler = require("../src/middleware/error.middleware");
+const {
+  INTERNAL_ERROR_MESSAGE,
+  INVALID_JSON_MESSAGE,
+  PAYLOAD_TOO_LARGE_MESSAGE
+} = require("../src/middleware/error.middleware");
+
+// The exact properties the JSON body parser sets when a request body exceeds
+// the configured limit. Reproduced from a real oversized request so the unit
+// coverage mirrors the parser contract rather than a guess.
+function createEntityTooLargeError(overrides = {}) {
+  const error = new Error("request entity too large");
+  error.name = "PayloadTooLargeError";
+  error.status = 413;
+  error.statusCode = 413;
+  error.type = "entity.too.large";
+  error.expose = true;
+  error.expected = 1200012;
+  error.length = 1200012;
+  error.limit = 1048576;
+  return Object.assign(error, overrides);
+}
 
 function captureErrors(t) {
   const calls = [];
@@ -125,6 +146,103 @@ test("non-Error payloads get an unknown diagnostic without serializing the paylo
   assertDiagnostic(calls, {
     category: "unexpected_error", errorType: "Unknown", status: 500
   });
+});
+
+test("an entity-too-large error maps to a safe 413 without leaking parser details", (t) => {
+  const calls = captureErrors(t);
+  const error = createEntityTooLargeError();
+  const response = handle(error);
+
+  assert.equal(response.statusCode, 413);
+  assert.deepEqual(response.body, {
+    success: false,
+    error: PAYLOAD_TOO_LARGE_MESSAGE
+  });
+
+  // No parser internals, no received length, and no configured limit may be
+  // published or logged.
+  const published = JSON.stringify(response.body);
+
+  for (const forbidden of [
+    "entity.too.large",
+    "PayloadTooLargeError",
+    "request entity too large",
+    "1048576",
+    "1200012"
+  ]) {
+    assert.equal(published.includes(forbidden), false, forbidden);
+    assert.equal(format(...calls[0]).includes(forbidden), false, forbidden);
+  }
+
+  assert.equal(calls.flat().includes(error), false);
+  assertDiagnostic(calls, {
+    category: "payload_too_large",
+    errorType: "Error",
+    status: 413
+  });
+});
+
+test("a 413 without the parser type is still mapped to 413", (t) => {
+  const calls = captureErrors(t);
+  const error = Object.assign(new Error("synthetic-413"), { status: 413 });
+  const response = handle(error);
+
+  assert.equal(response.statusCode, 413);
+  assert.deepEqual(response.body, {
+    success: false,
+    error: PAYLOAD_TOO_LARGE_MESSAGE
+  });
+  assertDiagnostic(calls, {
+    category: "payload_too_large",
+    errorType: "Error",
+    status: 413
+  });
+});
+
+test("malformed JSON still maps to 400 and is not treated as an oversized body", (t) => {
+  const calls = captureErrors(t);
+  const malformed = Object.assign(new SyntaxError("synthetic"), {
+    status: 400,
+    body: "synthetic-submitted-body",
+    type: "entity.parse.failed"
+  });
+  const response = handle(malformed);
+
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(response.body, {
+    success: false,
+    error: INVALID_JSON_MESSAGE
+  });
+  assertDiagnostic(calls, {
+    category: "invalid_json",
+    errorType: "SyntaxError",
+    status: 400
+  });
+});
+
+test("an unrelated error still maps to the generic safe 500", (t) => {
+  const calls = captureErrors(t);
+  const error = new Error("synthetic-unrelated-detail");
+  error.body = "synthetic-body-marker";
+  error.type = "entity.parse.failed";
+  const response = handle(error);
+
+  assert.equal(response.statusCode, 500);
+  assert.deepEqual(response.body, {
+    success: false,
+    error: INTERNAL_ERROR_MESSAGE
+  });
+  assertDiagnostic(calls, {
+    category: "unexpected_error",
+    errorType: "Error",
+    status: 500
+  });
+});
+
+test("the published messages are stable and distinct", () => {
+  assert.equal(INVALID_JSON_MESSAGE, "Invalid JSON payload");
+  assert.equal(PAYLOAD_TOO_LARGE_MESSAGE, "Request body too large");
+  assert.equal(INTERNAL_ERROR_MESSAGE, "Internal server error");
 });
 
 for (const [label, error, status, message] of [
