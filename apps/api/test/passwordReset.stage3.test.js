@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const authRoutes = require("../src/routes/auth.routes");
+const User = require("../src/models/User");
 const passwordResetRoutes = require("../src/routes/passwordReset.routes");
 const errorHandler = require("../src/middleware/error.middleware");
 const {
@@ -897,7 +898,28 @@ test("existing auth routes are unchanged by the password-reset wiring", () => {
     );
   }
 });
-test("existing register, login, me, and RBAC behavior is unchanged", async () => {
+test("existing register, login, me, and RBAC behavior is unchanged", async (t) => {
+  // `authenticate` now resolves the current User record, so the token's id
+  // must map to an active account. It is resolved as role "user" from the
+  // database, which keeps the RBAC denial assertion below meaningful: the
+  // authorization decision now comes from server state, not the token claim.
+  t.mock.method(User, "findById", () => {
+    const query = {
+      select() {
+        return query;
+      },
+      then(onFulfilled, onRejected) {
+        return Promise.resolve({
+          _id: RESET_USER_ID,
+          role: "user",
+          isActive: true
+        }).then(onFulfilled, onRejected);
+      }
+    };
+
+    return query;
+  });
+
   const userToken = jwt.sign(
     {
       userId: RESET_USER_ID.toString(),

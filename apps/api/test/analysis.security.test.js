@@ -11,6 +11,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const Analysis = require("../src/models/Analysis");
+const User = require("../src/models/User");
 const errorHandler = require("../src/middleware/error.middleware");
 
 // Run before loading the Analyzer service/router so newly introduced imports
@@ -99,6 +100,29 @@ async function assertMalformedIdsRejected(t, method) {
     }
   });
 
+  const authenticatedUserId = new mongoose.Types.ObjectId();
+
+  // `authenticate` now reads the current User record, so the token's id must
+  // resolve to an active account before the request can reach route
+  // validation. This stub is scoped to the test and touches no Analysis model,
+  // so the "no model operation for a malformed ID" assertions stay intact.
+  t.mock.method(User, "findById", () => {
+    const query = {
+      select() {
+        return query;
+      },
+      then(onFulfilled, onRejected) {
+        return Promise.resolve({
+          _id: authenticatedUserId,
+          role: "user",
+          isActive: true
+        }).then(onFulfilled, onRejected);
+      }
+    };
+
+    return query;
+  });
+
   const app = express();
   app.use(express.json());
   app.use("/api/analyze", require("../src/routes/analysis.routes"));
@@ -112,7 +136,7 @@ async function assertMalformedIdsRejected(t, method) {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const token = jwt.sign(
-    { userId: new mongoose.Types.ObjectId().toString(), role: "user" },
+    { userId: authenticatedUserId.toString(), role: "user" },
     testJwtSecret,
     { expiresIn: "1h" }
   );

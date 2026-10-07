@@ -10,6 +10,7 @@ const {
   createReportingController
 } = require("../src/controllers/reporting.controller");
 const reportingRoutes = require("../src/routes/reporting.routes");
+const User = require("../src/models/User");
 const {
   REPORTING_ERROR_CODES,
   ReportingServiceError
@@ -182,6 +183,47 @@ let server;
 let baseUrl;
 
 test.before(async () => {
+  // `authenticate` now resolves the current User record, so every synthetic id
+  // these tests sign into its JWTs must map to an active account. The stub is
+  // a chainable thenable because the middleware calls `.select()` before
+  // awaiting, and it stays installed for the whole file so each pre-existing
+  // assertion keeps its original meaning.
+  // Each synthetic id keeps the role these tests already assume it holds, so
+  // the pre-existing staff/admin authorization assertions keep their meaning
+  // while the identity is now sourced from the database rather than the token.
+  const activeAccounts = new Map([
+    [userId, "user"],
+    [otherUserId, "user"],
+    [staffId, "staff"],
+    [otherStaffId, "staff"],
+    [adminId, "admin"]
+  ]);
+
+  const originalFindById = User.findById.bind(User);
+
+  User.findById = (id) => {
+    const role = activeAccounts.get(String(id));
+
+    if (!role) {
+      return originalFindById(id);
+    }
+
+    const query = {
+      select() {
+        return query;
+      },
+      then(onFulfilled, onRejected) {
+        return Promise.resolve({
+          _id: new mongoose.Types.ObjectId(String(id)),
+          role,
+          isActive: true
+        }).then(onFulfilled, onRejected);
+      }
+    };
+
+    return query;
+  };
+
   server = http.createServer(app);
   await new Promise((resolve) => {
     server.listen(0, "127.0.0.1", resolve);

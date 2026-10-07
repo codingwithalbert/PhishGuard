@@ -86,9 +86,23 @@ function stubPersistence(t, account = null) {
     return query;
   });
 
-  t.mock.method(User, "findById", async (id) => {
+  // `findById` is now also called by `authenticate`, which chains `.select()`
+  // before awaiting, so the stub must be a thenable with a chainable select()
+  // rather than a plain async function.
+  t.mock.method(User, "findById", (id) => {
     state.ids.push(String(id));
-    return account && String(account._id) === String(id) ? account : null;
+    const result =
+      account && String(account._id) === String(id) ? account : null;
+    const query = {
+      select(selection) {
+        state.selections.push(selection);
+        return query;
+      },
+      then(onFulfilled, onRejected) {
+        return Promise.resolve(result).then(onFulfilled, onRejected);
+      }
+    };
+    return query;
   });
 
   t.mock.method(User, "create", async (input) => {
@@ -183,14 +197,23 @@ test("inactive account login returns the safe 401 response", async (t) => {
   assert.equal(state.writes.length, 0);
 });
 
-test("GET /api/auth/me for an inactive authenticated account returns the safe 404 response", async (t) => {
+test("GET /api/auth/me rejects an inactive authenticated account in the authentication middleware", async (t) => {
   const account = makeAccount({ isActive: false });
   const state = stubPersistence(t, account);
+  const meRoute = authRoutes.stack.find((layer) => layer.route?.path === "/me").route;
+  const handler = t.mock.method(meRoute.stack.at(-1), "handle");
   const response = await getMe(account);
-  assert.equal(response.status, 404);
-  assert.deepEqual(await response.json(), { success: false, error: "User not found" });
+
+  // Account state is now enforced before the controller runs, so the request
+  // is refused with the generic 403 rather than reaching `getMe`. This proves
+  // `authenticate` reads current User state, not the token's claims.
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    success: false,
+    error: "Invalid or expired token"
+  });
+  assert.equal(handler.mock.callCount(), 0);
   assert.deepEqual(state.ids, [String(account._id)]);
-  // This proves the me controller checks activity, not global JWT revocation.
 });
 
 test("GET /api/auth/me rejects a correctly signed expired JWT with a safe 403 before downstream execution", async (t) => {
@@ -280,5 +303,18 @@ test("GET /api/auth/me returns only safe fields without protected credential sta
   const account = makeAccount();
   const state = stubPersistence(t, account);
   await assertSafeResponse(await getMe(account), 200, ["success", "user"], account);
-  assert.deepEqual(state.ids, [String(account._id)]);
+
+  // Two lookups are expected and correct: one in `authenticate` to read current
+  // account state, and the existing one in `getMe`. The redundant controller
+  // lookup is deliberately left in place by this change, so both must resolve
+  // the same current account id.
+  assert.deepEqual(state.ids, [
+    String(account._id),
+    String(account._id)
+  ]);
+
+  // The authentication lookup is the only projection on this path, and it is
+  // restricted to the three fields authorization needs. `getMe` performs no
+  // `select()` at all, so no `+password` or reset-state opt-in can occur here.
+  assert.deepEqual(state.selections, [{ _id: 1, role: 1, isActive: 1 }]);
 });

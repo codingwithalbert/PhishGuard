@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const accountController = require("../src/controllers/account.controller");
 const authController = require("../src/controllers/auth.controller");
 const authRoutes = require("../src/routes/auth.routes");
+const User = require("../src/models/User");
 const errorHandler = require("../src/middleware/error.middleware");
 const { auditLog } = require("../src/middleware/audit.middleware");
 const {
@@ -31,6 +32,8 @@ process.env.JWT_SECRET = testJwtSecret;
 
 const USER_ID = new mongoose.Types.ObjectId();
 const OTHER_USER_ID = new mongoose.Types.ObjectId();
+const STAFF_USER_ID = new mongoose.Types.ObjectId();
+const ADMIN_USER_ID = new mongoose.Types.ObjectId();
 const CURRENT_PASSWORD = "current-Password-1";
 const NEW_PASSWORD = "new-Password-2";
 const SAFE_PROFILE = {
@@ -103,6 +106,44 @@ let server;
 let baseUrl;
 
 before(async () => {
+  // `authenticate` now reads the current User record, so the synthetic ids
+  // these tests sign into their JWTs must resolve to an active account. The
+  // stub is a chainable thenable because the middleware calls `.select()`
+  // before awaiting, and it stays a stub for the whole file so every
+  // pre-existing assertion keeps its original meaning.
+  const activeAccounts = new Map([
+    [USER_ID.toString(), "user"],
+    [OTHER_USER_ID.toString(), "user"],
+    [STAFF_USER_ID.toString(), "staff"],
+    [ADMIN_USER_ID.toString(), "admin"]
+  ]);
+
+  const originalFindById = User.findById.bind(User);
+
+  User.findById = (id) => {
+    const key = String(id);
+    const role = activeAccounts.get(key);
+
+    if (!role) {
+      return originalFindById(id);
+    }
+
+    const query = {
+      select() {
+        return query;
+      },
+      then(onFulfilled, onRejected) {
+        return Promise.resolve({
+          _id: new mongoose.Types.ObjectId(key),
+          role,
+          isActive: true
+        }).then(onFulfilled, onRejected);
+      }
+    };
+
+    return query;
+  };
+
   server = http.createServer(app);
 
   await new Promise((resolve) => {

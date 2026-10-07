@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const errorHandler = require("../src/middleware/error.middleware");
+const User = require("../src/models/User");
 const authRoutes = require("../src/routes/auth.routes");
 const researchRoutes = require("../src/routes/research.routes");
 const {
@@ -113,6 +114,41 @@ let server;
 let baseUrl;
 
 before(async () => {
+  // `authenticate` now resolves the current User record, so each synthetic id
+  // must map to an active account holding the role these tests already assume.
+  // The role therefore comes from the database, not the token claim, so the
+  // existing admin/user/staff authorization assertions keep their meaning.
+  const activeAccounts = new Map([
+    [ADMIN_ID.toString(), "admin"],
+    [USER_ID.toString(), "user"],
+    [STAFF_ID.toString(), "staff"]
+  ]);
+
+  const originalFindById = User.findById.bind(User);
+
+  User.findById = (id) => {
+    const role = activeAccounts.get(String(id));
+
+    if (!role) {
+      return originalFindById(id);
+    }
+
+    const query = {
+      select() {
+        return query;
+      },
+      then(onFulfilled, onRejected) {
+        return Promise.resolve({
+          _id: new mongoose.Types.ObjectId(String(id)),
+          role,
+          isActive: true
+        }).then(onFulfilled, onRejected);
+      }
+    };
+
+    return query;
+  };
+
   server = http.createServer(app);
 
   await new Promise((resolve) => {
