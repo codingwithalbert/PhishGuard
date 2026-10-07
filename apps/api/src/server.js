@@ -59,6 +59,25 @@ app.use("/api/reports", reportingRoutes);
 app.use("/api/research", researchRoutes);
 
 app.get("/api/health", (req, res) => {
+  // TEMPORARY PROXY DIAGNOSTIC — REMOVE AFTER RENDER OBSERVATION.
+  // Logs only booleans, an integer count, and Express's own trust proxy
+  // setting. It never logs or returns any raw IP address, the
+  // X-Forwarded-For value, any other header, credentials, or user data.
+  const xffHeader = req.headers["x-forwarded-for"];
+  const xffPresent =
+    typeof xffHeader === "string" && xffHeader.length > 0;
+
+  console.log(
+    "[PROXY_DIAGNOSTIC]",
+    JSON.stringify({
+      xffPresent,
+      xffEntryCount: xffPresent ? xffHeader.split(",").length : 0,
+      ipEqualsRemoteAddress:
+        String(req.ip) === String(req.socket?.remoteAddress),
+      trustProxySetting: String(req.app.get("trust proxy"))
+    })
+  );
+
   res.status(200).json({
     status: "ok",
     service: "phishguard-api"
