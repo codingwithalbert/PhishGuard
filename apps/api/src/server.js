@@ -59,6 +59,32 @@ app.use("/api/reports", reportingRoutes);
 app.use("/api/research", researchRoutes);
 
 app.get("/api/health", (req, res) => {
+  // TEMPORARY PROXY DIAGNOSTIC — REMOVE IMMEDIATELY AFTER THE PRODUCTION
+  // OBSERVATION.
+  //
+  // Purpose: determine whether a caller-supplied CF-Connecting-IP sentinel
+  // survives unchanged to this application.
+  //
+  // Privacy: the received header value is never logged. Only two booleans and
+  // Express's own trust proxy setting are emitted, so no IP address, header
+  // value, credential, or user data ever reaches the log. The sentinel is an
+  // RFC 5737 documentation-only address (203.0.113.0/24) and is used purely as
+  // an in-memory comparison target. Nothing is stored between requests.
+  const PROXY_DIAGNOSTIC_SENTINEL = "203.0.113.99";
+  const cfConnectingIpHeader = req.headers["cf-connecting-ip"];
+
+  console.log(
+    "[PROXY_DIAGNOSTIC]",
+    JSON.stringify({
+      cfConnectingIpPresent:
+        typeof cfConnectingIpHeader === "string" &&
+        cfConnectingIpHeader.length > 0,
+      cfConnectingIpMatchesSentinel:
+        cfConnectingIpHeader === PROXY_DIAGNOSTIC_SENTINEL,
+      trustProxySetting: String(req.app.get("trust proxy"))
+    })
+  );
+
   res.status(200).json({
     status: "ok",
     service: "phishguard-api"
