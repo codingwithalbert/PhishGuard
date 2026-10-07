@@ -15,6 +15,10 @@ const {
   validateReportSubmission,
   validateStartReview
 } = require("../middleware/reporting.validate.middleware");
+const {
+  requireAuthenticatedIdentity,
+  reviewerMessageLimiter
+} = require("../middleware/rateLimit.middleware");
 const defaultController = require("../controllers/reporting.controller");
 
 function createReportingRouter(controller = defaultController) {
@@ -47,9 +51,14 @@ function createReportingRouter(controller = defaultController) {
     controller.getReviewReportMessages
   );
 
+  // Authenticated-user abuse protection: the router-wide `authenticate` above
+  // runs first, then role authorization, then the identity guard, then the
+  // limiter. Authorization is neither weakened nor reordered.
   router.post(
     "/review/:reportId/messages",
     authorizeRoles("staff", "admin"),
+    requireAuthenticatedIdentity,
+    reviewerMessageLimiter,
     validateReportId,
     validateReportMessage,
     controller.createReviewReportMessage

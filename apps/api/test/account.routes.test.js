@@ -16,6 +16,10 @@ const {
   authenticate
 } = require("../src/middleware/auth.middleware");
 const {
+  credentialChangeLimiter,
+  requireAuthenticatedIdentity
+} = require("../src/middleware/rateLimit.middleware");
+const {
   validateChangePasswordRequest,
   validateProfileUpdateRequest
 } = require("../src/middleware/account.validate.middleware");
@@ -306,8 +310,12 @@ test("both account routes exist in production with the required handler order", 
     validateProfileUpdateRequest,
     accountController.updateProfile
   ]);
+  // Authenticated abuse protection runs after authentication: the identity guard
+  // then the credential limiter, both ahead of validation and the controller.
   assert.deepEqual(changePasswordRoute.handlers, [
     authenticate,
+    requireAuthenticatedIdentity,
+    credentialChangeLimiter,
     validateChangePasswordRequest,
     accountController.changePassword
   ]);

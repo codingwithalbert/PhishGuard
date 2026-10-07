@@ -1,8 +1,10 @@
 const express = require("express");
 
 const {
+  credentialChangeLimiter,
   loginLimiter,
-  registerLimiter
+  registerLimiter,
+  requireAuthenticatedIdentity
 } = require("../middleware/rateLimit.middleware");
 const {
   register,
@@ -51,9 +53,13 @@ router.patch(
   updateProfile
 );
 
+// Authenticated-user abuse protection: authentication first, then the identity
+// guard, then the limiter, then the existing validation and controller.
 router.post(
   "/change-password",
   authenticate,
+  requireAuthenticatedIdentity,
+  credentialChangeLimiter,
   validateChangePasswordRequest,
   changePassword
 );
