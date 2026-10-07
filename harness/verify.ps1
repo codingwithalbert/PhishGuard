@@ -1,5 +1,14 @@
 $ErrorActionPreference = "Stop"
 
+# Resolve the repository root from this script's own location so the harness
+# can be invoked from any working directory. The caller's location is never
+# permanently changed; every location change is scoped by Push-Location.
+if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    throw "Unable to determine the harness script directory."
+}
+
+$repoRoot = (Get-Item -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath "..")).FullName
+
 Write-Host ""
 Write-Host "========================================"
 Write-Host "       PhishGuard Verification"
@@ -38,7 +47,9 @@ Run-Check "Required project files exist" {
     )
 
     foreach ($file in $requiredFiles) {
-        if (-not (Test-Path $file)) {
+        $filePath = Join-Path -Path $repoRoot -ChildPath $file
+
+        if (-not (Test-Path -LiteralPath $filePath)) {
             throw "Missing required file: $file"
         }
     }
@@ -46,7 +57,32 @@ Run-Check "Required project files exist" {
 
 # 2. API tests
 Run-Check "API test suite" {
-    Push-Location "apps/api"
+    # apps/api "npm test" runs "node --test", which auto-discovers suites that
+    # can depend on a running localhost API, a configured MongoDB, persistent
+    # writes/cleanup, inherited environment configuration, and login
+    # rate-limit state. Execution therefore requires deliberate authorization.
+    if ($env:PHISHGUARD_ALLOW_LIVE_TESTS -ne "1") {
+        $gateMessage = @(
+            "Broad backend tests were NOT authorized, so they were not executed.",
+            "apps/api ""npm test"" runs ""node --test"", which auto-discovers suites that may use:",
+            "  - a running localhost API",
+            "  - a configured MongoDB/database",
+            "  - persistent test data (writes and cleanup)",
+            "",
+            "Authorization: set PHISHGUARD_ALLOW_LIVE_TESTS=1 for this session.",
+            "This authorizes execution only; it does NOT prove the environment is safe.",
+            "You are responsible for confirming that a localhost API is intentionally",
+            "configured, the database target is disposable/approved, no production data",
+            "or production configuration is used, and required configuration is suitable.",
+            "",
+            "Opt-in MongoDB integration suites keep their own individual flags and are",
+            "not enabled by this gate."
+        ) -join [System.Environment]::NewLine
+
+        throw $gateMessage
+    }
+
+    Push-Location (Join-Path -Path $repoRoot -ChildPath "apps/api")
 
     try {
         npm test
@@ -62,7 +98,7 @@ Run-Check "API test suite" {
 
 # 3. Frontend checks
 Run-Check "Frontend lint" {
-    Push-Location "apps/web"
+    Push-Location (Join-Path -Path $repoRoot -ChildPath "apps/web")
 
     try {
         npm run lint
@@ -77,7 +113,7 @@ Run-Check "Frontend lint" {
 }
 
 Run-Check "Frontend production build" {
-    Push-Location "apps/web"
+    Push-Location (Join-Path -Path $repoRoot -ChildPath "apps/web")
 
     try {
         npm run build
@@ -93,10 +129,17 @@ Run-Check "Frontend production build" {
 
 # 4. Tracked secret-file check
 Run-Check "No secret environment files are tracked by Git" {
-    $trackedFiles = git ls-files
+    Push-Location $repoRoot
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to inspect tracked Git files."
+    try {
+        $trackedFiles = git ls-files
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to inspect tracked Git files."
+        }
+    }
+    finally {
+        Pop-Location
     }
 
     $trackedEnvFiles = $trackedFiles |
@@ -113,10 +156,17 @@ Run-Check "No secret environment files are tracked by Git" {
 
 # 5. Git staged-file safety
 Run-Check "No obvious secret files are staged" {
-    $stagedFiles = git diff --cached --name-only
+    Push-Location $repoRoot
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to inspect staged Git files."
+    try {
+        $stagedFiles = git diff --cached --name-only
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to inspect staged Git files."
+        }
+    }
+    finally {
+        Pop-Location
     }
 
     $blockedPatterns = @(
@@ -128,6 +178,12 @@ Run-Check "No obvious secret files are staged" {
     )
 
     foreach ($file in $stagedFiles) {
+        # .env.example is a committed configuration template, not a secret,
+        # and is already permitted by the tracked-file check above.
+        if ($file -match '\.env\.example$') {
+            continue
+        }
+
         foreach ($pattern in $blockedPatterns) {
             if ($file -match $pattern) {
                 throw "Potential secret file is staged: $file"
