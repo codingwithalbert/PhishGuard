@@ -26,6 +26,10 @@ import {
   startReviewReport,
   updateReviewReportPriority
 } from "../services/api";
+import {
+  getStoredUser,
+  isInvalidSessionError
+} from "../services/session";
 
 const IT_PRIORITY_VALUES = Object.freeze([
   "low",
@@ -43,7 +47,7 @@ const MESSAGE_MAX_LENGTH = 1000;
 const REVIEWER_NOTE_MAX_LENGTH = 1000;
 
 function isSessionError(error) {
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
 function getErrorDetails(error, fallback) {
@@ -152,21 +156,7 @@ function getReviewerNoteText(report) {
 }
 
 function getStoredViewer() {
-  try {
-    const storedUser = localStorage.getItem("user");
-
-    if (!storedUser) {
-      return null;
-    }
-
-    const parsedUser = JSON.parse(storedUser);
-
-    return parsedUser && typeof parsedUser === "object"
-      ? parsedUser
-      : null;
-  } catch {
-    return null;
-  }
+  return getStoredUser();
 }
 
 function getStoredText(source, key) {

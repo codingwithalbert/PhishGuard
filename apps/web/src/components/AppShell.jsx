@@ -3,24 +3,10 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopHeader from "./TopHeader";
 import MobileNav from "./MobileNav";
-
-function getStoredUserRole() {
-  try {
-    const storedUser = localStorage.getItem("user");
-
-    if (!storedUser) {
-      return null;
-    }
-
-    const parsedUser = JSON.parse(storedUser);
-
-    return typeof parsedUser?.role === "string"
-      ? parsedUser.role
-      : null;
-  } catch {
-    return null;
-  }
-}
+import {
+  clearStoredSession,
+  getStoredUserRole
+} from "../services/session";
 
 /*
  * Authenticated application shell (Major UI/UX V1).
@@ -62,8 +48,7 @@ function AppShell() {
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearStoredSession();
 
     navigate("/login");
   }

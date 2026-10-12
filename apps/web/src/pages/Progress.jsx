@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import useEntranceMotion from "../hooks/useEntranceMotion";
 import { getProgress } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 
 function isAssessmentAttempt(attempt, totalKey) {
   return (
@@ -78,7 +79,7 @@ function getErrorDetails(error, fallback) {
 }
 
 function isSessionError(error) {
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
 function formatCompletedAt(value) {

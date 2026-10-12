@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import { getOwnReports } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 import {
   formatReportingDate,
   getReportAssessmentLabel,
@@ -11,7 +12,7 @@ import {
 } from "../components/reporting/reportingUi";
 
 function isSessionError(error) {
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
 function getErrorDetails(error, fallback) {

@@ -7,6 +7,7 @@ import {
 
 import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SessionExpiryHandler from "./components/SessionExpiryHandler";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -27,6 +28,7 @@ import Profile from "./pages/Profile";
 function App() {
   return (
     <BrowserRouter>
+      <SessionExpiryHandler />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
 

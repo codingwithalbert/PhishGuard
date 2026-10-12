@@ -11,6 +11,7 @@ import {
   getLatestAwarenessAssessment,
   submitAwarenessAssessment
 } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 
 function isQuestionSet(questions) {
   return (
@@ -246,7 +247,7 @@ function AwarenessAssessment() {
         ) : latestError ? (
           <div className="awareness-inline-error" role="alert">
             <p>{latestError.message}</p>
-            {latestError.status === 401 && (
+            {isInvalidSessionError(latestError) && (
               <p>
                 <Link to="/login">Sign in again</Link>
               </p>
@@ -335,7 +336,7 @@ function AwarenessAssessment() {
         ) : questionsError ? (
           <div className="awareness-inline-error" role="alert">
             <p>{questionsError.message}</p>
-            {questionsError.status === 401 && (
+            {isInvalidSessionError(questionsError) && (
               <p>
                 <Link to="/login">Sign in again</Link>
               </p>
@@ -354,7 +355,7 @@ function AwarenessAssessment() {
             {formError && (
               <div className="awareness-inline-error" role="alert">
                 <p>{formError.message}</p>
-                {formError.status === 401 && (
+                {isInvalidSessionError(formError) && (
                   <p>
                     <Link to="/login">Sign in again</Link>
                   </p>

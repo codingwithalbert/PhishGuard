@@ -1,11 +1,21 @@
+import {
+  getStoredToken,
+  handleInvalidSessionForRequest,
+  isInvalidSessionError,
+  SIGN_IN_REQUIRED_MESSAGE
+} from "./session";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 async function request(endpoint, options = {}) {
+  const { requiresAuth = false, ...fetchOptions } = options;
+  const requestToken = requiresAuth ? getStoredToken() : null;
   const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       "Content-Type": "application/json",
-      ...options.headers
+      ...(requiresAuth ? getAuthHeaders(requestToken) : {}),
+      ...fetchOptions.headers
     }
   });
 
@@ -16,14 +26,24 @@ async function request(endpoint, options = {}) {
 
     error.status = response.status;
 
+    if (requiresAuth && isInvalidSessionError(error)) {
+      handleInvalidSessionForRequest(requestToken, {
+        message: requestToken
+          ? undefined
+          : SIGN_IN_REQUIRED_MESSAGE
+      });
+    }
+
     throw error;
   }
 
   return data;
 }
 
-function getAuthHeaders() {
-  const token = localStorage.getItem("token");
+function getAuthHeaders(token = getStoredToken()) {
+  if (!token) {
+    return {};
+  }
 
   return {
     Authorization: `Bearer ${token}`
@@ -80,7 +100,7 @@ export function resetPassword(token, password) {
 export function getCurrentProfile() {
   return request("/api/auth/me", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
@@ -89,7 +109,7 @@ export function getCurrentProfile() {
 export function updateProfileName(name) {
   return request("/api/auth/profile", {
     method: "PATCH",
-    headers: getAuthHeaders(),
+    requiresAuth: true,
     body: JSON.stringify({
       name
     })
@@ -107,14 +127,13 @@ const CURRENT_PASSWORD_INCORRECT_MESSAGE = "Current password is incorrect";
 // That is a form error rather than a session failure, so it is flagged here to
 // keep the page from treating it as an expired session.
 //
-// Only that exact status-and-message pair is flagged. Any other 401 from this
-// endpoint, such as a missing or unreadable authentication header, keeps the
-// existing session-error behaviour, and so does every 403 and any other status.
+// Only that exact status-and-message pair is flagged for the form. Confirmed
+// expired or revoked sessions are handled centrally by request().
 export async function changePassword(currentPassword, newPassword) {
   try {
     return await request("/api/auth/change-password", {
       method: "POST",
-      headers: getAuthHeaders(),
+      requiresAuth: true,
       body: JSON.stringify({
         currentPassword,
         newPassword
@@ -137,7 +156,7 @@ export async function changePassword(currentPassword, newPassword) {
 export function getResearchAnalytics() {
   return request("/api/research/analytics", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
@@ -167,10 +186,11 @@ function resolveCsvFilename(contentDisposition) {
 // forced through a JSON parser. The response is only read as a download blob:
 // it is never parsed, logged, displayed, or stored.
 async function requestResearchCsv() {
+  const requestToken = getStoredToken();
   const response = await fetch(`${API_URL}/api/research/export.csv`, {
     method: "GET",
     headers: {
-      ...getAuthHeaders(),
+      ...getAuthHeaders(requestToken),
       Accept: "text/csv"
     }
   });
@@ -187,6 +207,14 @@ async function requestResearchCsv() {
       }
     } catch {
       // A non-JSON error body is ignored; the safe default message stands.
+    }
+
+    if (isInvalidSessionError(error)) {
+      handleInvalidSessionForRequest(requestToken, {
+        message: requestToken
+          ? undefined
+          : SIGN_IN_REQUIRED_MESSAGE
+      });
     }
 
     throw error;
@@ -242,7 +270,7 @@ export function toSafeErrorMessage(error, fallback) {
 export function analyzeUrl(url) {
   return request("/api/analyze", {
     method: "POST",
-    headers: getAuthHeaders(),
+    requiresAuth: true,
     body: JSON.stringify({
       url
     })
@@ -252,42 +280,42 @@ export function analyzeUrl(url) {
 export function getAnalyses() {
   return request("/api/analyze", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getDashboardSummary() {
   return request("/api/dashboard/summary", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getProgress() {
   return request("/api/progress", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function deleteAnalysis(id) {
   return request(`/api/analyze/${id}`, {
     method: "DELETE",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getAwarenessQuestions() {
   return request("/api/awareness/questions", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function submitAwarenessAssessment(answers) {
   return request("/api/awareness/submit", {
     method: "POST",
-    headers: getAuthHeaders(),
+    requiresAuth: true,
     body: JSON.stringify({
       answers
     })
@@ -297,21 +325,21 @@ export function submitAwarenessAssessment(answers) {
 export function getLatestAwarenessAssessment() {
   return request("/api/awareness/latest", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getPhishingIdentificationScenarios() {
   return request("/api/phishing-identification/scenarios", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function submitPhishingIdentificationAssessment(answers) {
   return request("/api/phishing-identification/submit", {
     method: "POST",
-    headers: getAuthHeaders(),
+    requiresAuth: true,
     body: JSON.stringify({
       answers
     })
@@ -321,21 +349,21 @@ export function submitPhishingIdentificationAssessment(answers) {
 export function getLatestPhishingIdentificationAssessment() {
   return request("/api/phishing-identification/latest", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getTrainingModules() {
   return request("/api/training/modules", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getTrainingProgress() {
   return request("/api/training/progress", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
@@ -344,7 +372,7 @@ export function completeTrainingModule(moduleId) {
     `/api/training/modules/${encodeURIComponent(moduleId)}/complete`,
     {
       method: "POST",
-      headers: getAuthHeaders()
+      requiresAuth: true
     }
   );
 }
@@ -375,7 +403,7 @@ export function createReport({ analysisId, reason, details } = {}) {
 
   return request("/api/reports", {
     method: "POST",
-    headers: getAuthHeaders(),
+    requiresAuth: true,
     body: JSON.stringify(body)
   });
 }
@@ -383,14 +411,14 @@ export function createReport({ analysisId, reason, details } = {}) {
 export function getOwnReports() {
   return request("/api/reports", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getOwnReport(reportId) {
   return request(`/api/reports/${encodeURIComponent(reportId)}`, {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
@@ -399,7 +427,7 @@ export function getOwnReportMessages(reportId) {
     `/api/reports/${encodeURIComponent(reportId)}/messages`,
     {
       method: "GET",
-      headers: getAuthHeaders()
+      requiresAuth: true
     }
   );
 }
@@ -409,7 +437,7 @@ export function createOwnReportMessage({ reportId, message } = {}) {
     `/api/reports/${encodeURIComponent(reportId)}/messages`,
     {
       method: "POST",
-      headers: getAuthHeaders(),
+      requiresAuth: true,
       body: JSON.stringify({ message })
     }
   );
@@ -418,14 +446,14 @@ export function createOwnReportMessage({ reportId, message } = {}) {
 export function getReviewQueue() {
   return request("/api/reports/review", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
 export function getAssignmentCandidates() {
   return request("/api/reports/review/assignees", {
     method: "GET",
-    headers: getAuthHeaders()
+    requiresAuth: true
   });
 }
 
@@ -434,7 +462,7 @@ export function getReviewReport(reportId) {
     `/api/reports/review/${encodeURIComponent(reportId)}`,
     {
       method: "GET",
-      headers: getAuthHeaders()
+      requiresAuth: true
     }
   );
 }
@@ -444,7 +472,7 @@ export function getReviewReportMessages(reportId) {
     `/api/reports/review/${encodeURIComponent(reportId)}/messages`,
     {
       method: "GET",
-      headers: getAuthHeaders()
+      requiresAuth: true
     }
   );
 }
@@ -454,7 +482,7 @@ export function createReviewReportMessage({ reportId, message } = {}) {
     `/api/reports/review/${encodeURIComponent(reportId)}/messages`,
     {
       method: "POST",
-      headers: getAuthHeaders(),
+      requiresAuth: true,
       body: JSON.stringify({ message })
     }
   );
@@ -465,7 +493,7 @@ export function claimReviewReport(reportId) {
     `/api/reports/review/${encodeURIComponent(reportId)}/claim`,
     {
       method: "PATCH",
-      headers: getAuthHeaders()
+      requiresAuth: true
     }
   );
 }
@@ -475,7 +503,7 @@ export function assignReviewReport({ reportId, assignedTo } = {}) {
     `/api/reports/review/${encodeURIComponent(reportId)}/assignment`,
     {
       method: "PATCH",
-      headers: getAuthHeaders(),
+      requiresAuth: true,
       body: JSON.stringify({ assignedTo })
     }
   );
@@ -486,7 +514,7 @@ export function updateReviewReportPriority({ reportId, priority } = {}) {
     `/api/reports/review/${encodeURIComponent(reportId)}/priority`,
     {
       method: "PATCH",
-      headers: getAuthHeaders(),
+      requiresAuth: true,
       body: JSON.stringify({ priority })
     }
   );
@@ -497,7 +525,7 @@ export function startReviewReport(reportId) {
     `/api/reports/review/${encodeURIComponent(reportId)}/start`,
     {
       method: "PATCH",
-      headers: getAuthHeaders()
+      requiresAuth: true
     }
   );
 }
@@ -515,7 +543,7 @@ export function completeReviewReport({
     `/api/reports/review/${encodeURIComponent(reportId)}/complete`,
     {
       method: "PATCH",
-      headers: getAuthHeaders(),
+      requiresAuth: true,
       body: JSON.stringify(body)
     }
   );

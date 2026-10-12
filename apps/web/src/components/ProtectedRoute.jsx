@@ -1,25 +1,11 @@
 import { Navigate } from "react-router-dom";
-
-function getStoredUserRole() {
-  try {
-    const storedUser = localStorage.getItem("user");
-
-    if (!storedUser) {
-      return null;
-    }
-
-    const parsedUser = JSON.parse(storedUser);
-
-    return typeof parsedUser?.role === "string"
-      ? parsedUser.role
-      : null;
-  } catch {
-    return null;
-  }
-}
+import {
+  getStoredToken,
+  getStoredUserRole
+} from "../services/session";
 
 function ProtectedRoute({ children, allowedRoles }) {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
 
   if (!token) {
     return <Navigate to="/login" replace />;

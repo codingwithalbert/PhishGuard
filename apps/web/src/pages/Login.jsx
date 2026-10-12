@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import { loginUser } from "../services/api";
+import { storeSession } from "../services/session";
 
 function getLoginNotice(locationState) {
   return typeof locationState?.message === "string"
@@ -12,7 +13,9 @@ function getLoginNotice(locationState) {
 function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const notice = getLoginNotice(location.state);
+  const [notice, setNotice] = useState(() =>
+    getLoginNotice(location.state)
+  );
 
   const [form, setForm] = useState({
     email: "",
@@ -35,13 +38,13 @@ function Login() {
     event.preventDefault();
 
     setError("");
+    setNotice("");
     setLoading(true);
 
     try {
       const data = await loginUser(form.email, form.password);
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      storeSession(data.token, data.user);
 
       navigate("/dashboard");
     } catch (err) {

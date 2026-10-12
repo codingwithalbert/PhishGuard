@@ -11,6 +11,7 @@ import {
   getPhishingIdentificationScenarios,
   submitPhishingIdentificationAssessment
 } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 
 function isScenarioSet(scenarios) {
   return (
@@ -256,7 +257,7 @@ function PhishingIdentificationAssessment() {
         ) : latestError ? (
           <div className="awareness-inline-error" role="alert">
             <p>{latestError.message}</p>
-            {latestError.status === 401 && (
+            {isInvalidSessionError(latestError) && (
               <p>
                 <Link to="/login">Sign in again</Link>
               </p>
@@ -354,7 +355,7 @@ function PhishingIdentificationAssessment() {
         ) : scenariosError ? (
           <div className="awareness-inline-error" role="alert">
             <p>{scenariosError.message}</p>
-            {scenariosError.status === 401 && (
+            {isInvalidSessionError(scenariosError) && (
               <p>
                 <Link to="/login">Sign in again</Link>
               </p>
@@ -373,7 +374,7 @@ function PhishingIdentificationAssessment() {
             {formError && (
               <div className="awareness-inline-error" role="alert">
                 <p>{formError.message}</p>
-                {formError.status === 401 && (
+                {isInvalidSessionError(formError) && (
                   <p>
                     <Link to="/login">Sign in again</Link>
                   </p>

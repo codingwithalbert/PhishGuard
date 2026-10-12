@@ -12,6 +12,7 @@ import {
   getTrainingModules,
   getTrainingProgress
 } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 
 function isTrainingModule(module) {
   return (
@@ -70,7 +71,7 @@ function getErrorDetails(error, fallback) {
 }
 
 function isSessionError(error) {
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
 function formatCompletedAt(value) {

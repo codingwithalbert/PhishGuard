@@ -10,9 +10,10 @@ import {
   getAnalyses,
   getOwnReports
 } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 
 function isSessionError(error) {
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
 function getErrorDetails(error, fallback) {

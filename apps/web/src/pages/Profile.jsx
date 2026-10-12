@@ -6,6 +6,11 @@ import {
   getCurrentProfile,
   updateProfileName
 } from "../services/api";
+import {
+  clearStoredSession,
+  isInvalidSessionError,
+  storeUserSnapshot
+} from "../services/session";
 
 const NAME_MIN_LENGTH = 2;
 const NAME_MAX_LENGTH = 50;
@@ -46,27 +51,18 @@ function isChangePasswordResponse(data) {
   );
 }
 
-// The change-password helper flags only the frozen-contract rejection (401 with
-// "Current password is incorrect"), which is a form error rather than an expired
-// session. Every other status, including any other 401 and all 403 responses,
-// keeps the existing session-error behaviour used across the app.
+// Only confirmed authentication invalidation is treated as a session error.
+// Permission denials and form-level failures keep their local page handling.
 function isSessionError(error) {
-  if (error?.isCurrentPasswordRejection) {
-    return false;
-  }
-
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
-// Copies only the fields the page renders and classifies. The
-// `isCurrentPasswordRejection` boolean is carried over explicitly because
-// isSessionError() needs it: dropping it would reclassify the frozen-contract
-// 401 as a session error. No other property of the original error is copied.
+// Copies only the fields the page renders and classifies. No other property of
+// the original error is copied.
 function getErrorDetails(error, fallback) {
   return {
     message: error?.message || fallback,
-    status: error?.status,
-    isCurrentPasswordRejection: error?.isCurrentPasswordRejection === true
+    status: error?.status
   };
 }
 
@@ -74,15 +70,12 @@ function getErrorDetails(error, fallback) {
 // already relies on. No password, token, or other account data is stored.
 function updateStoredUserSnapshot(user) {
   try {
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      })
-    );
+    storeUserSnapshot({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
   } catch {
     // A storage failure must not break the profile update itself.
   }
@@ -342,8 +335,7 @@ function ChangePasswordForm() {
         throw formatError;
       }
 
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      clearStoredSession();
 
       navigate("/login", {
         replace: true,

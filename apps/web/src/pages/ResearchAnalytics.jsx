@@ -5,6 +5,7 @@ import {
   downloadResearchCsv,
   getResearchAnalytics
 } from "../services/api";
+import { isInvalidSessionError } from "../services/session";
 
 const UNAVAILABLE_VALUE = "—";
 const REQUEST_ERROR_MESSAGE =
@@ -148,7 +149,7 @@ function isResearchAnalyticsResponse(data) {
 }
 
 function isSessionError(error) {
-  return error?.status === 401 || error?.status === 403;
+  return isInvalidSessionError(error);
 }
 
 function getErrorDetails(error, fallback) {
