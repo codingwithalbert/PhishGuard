@@ -1,10 +1,18 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import { loginUser } from "../services/api";
 
+function getLoginNotice(locationState) {
+  return typeof locationState?.message === "string"
+    ? locationState.message
+    : "";
+}
+
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const notice = getLoginNotice(location.state);
 
   const [form, setForm] = useState({
     email: "",
@@ -87,6 +95,12 @@ function Login() {
       </form>
 
       {error && <p role="alert">{error}</p>}
+
+      {notice && (
+        <p className="success-message" role="status" aria-live="polite">
+          {notice}
+        </p>
+      )}
 
       <p className="auth-footer-link">
         Don&apos;t have an account? <Link to="/register">Register</Link>

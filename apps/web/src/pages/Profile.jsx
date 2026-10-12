@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import {
   changePassword,
@@ -17,6 +17,8 @@ const PROFILE_UPDATE_ERROR_MESSAGE =
   "Your profile could not be updated. Please try again.";
 const CHANGE_PASSWORD_ERROR_MESSAGE =
   "Your password could not be changed. Please try again.";
+const PASSWORD_CHANGED_LOGIN_MESSAGE =
+  "Password changed successfully. Please sign in again.";
 
 const ROLES = ["user", "staff", "admin"];
 
@@ -276,13 +278,14 @@ function EditProfileForm({ profile, onUpdated }) {
 }
 
 function ChangePasswordForm() {
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmNewPassword: ""
   });
 
-  const [message, setMessage] = useState("");
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -295,14 +298,13 @@ function ChangePasswordForm() {
     }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (saving) {
       return;
     }
 
-    setMessage("");
     setError(null);
 
     if (
@@ -323,36 +325,41 @@ function ChangePasswordForm() {
     setSaving(true);
 
     // Only the current and new password are sent. The confirmation field stays
-    // in the browser, and the current session is left untouched on success.
-    changePassword(form.currentPassword, form.newPassword)
-      .then((data) => {
-        if (!isChangePasswordResponse(data)) {
-          const formatError = new Error(
-            "The password change response could not be read in the expected format."
-          );
+    // in the browser. A successful change invalidates existing JWTs, so the
+    // stored session is cleared before sending the user back to login.
+    try {
+      const data = await changePassword(
+        form.currentPassword,
+        form.newPassword
+      );
 
-          formatError.status = 500;
-          throw formatError;
-        }
-
-        setForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmNewPassword: ""
-        });
-        setMessage(data.message);
-      })
-      .catch((requestError) => {
-        setError(
-          getErrorDetails(
-            requestError,
-            CHANGE_PASSWORD_ERROR_MESSAGE
-          )
+      if (!isChangePasswordResponse(data)) {
+        const formatError = new Error(
+          "The password change response could not be read in the expected format."
         );
-      })
-      .finally(() => {
-        setSaving(false);
+
+        formatError.status = 500;
+        throw formatError;
+      }
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      navigate("/login", {
+        replace: true,
+        state: {
+          message: PASSWORD_CHANGED_LOGIN_MESSAGE
+        }
       });
+    } catch (requestError) {
+      setError(
+        getErrorDetails(
+          requestError,
+          CHANGE_PASSWORD_ERROR_MESSAGE
+        )
+      );
+      setSaving(false);
+    }
   }
 
   return (
@@ -362,8 +369,8 @@ function ChangePasswordForm() {
     >
       <h2 id="profile-password-heading">Change password</h2>
       <p className="profile-panel-note">
-        Your password keeps working for this and any other signed-in device
-        until those sessions expire.
+        Changing your password ends your current session. You will sign in
+        again with the new password after the change is saved.
       </p>
 
       <form onSubmit={handleSubmit}>
@@ -417,12 +424,6 @@ function ChangePasswordForm() {
           {saving ? "Updating..." : "Change password"}
         </button>
       </form>
-
-      {message && (
-        <p className="success-message" role="status" aria-live="polite">
-          {message}
-        </p>
-      )}
 
       {error && (
         <div className="profile-form-error" role="alert">
