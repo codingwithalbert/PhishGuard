@@ -106,7 +106,7 @@ async function assertMalformedIdsRejected(t, method) {
   // resolve to an active account before the request can reach route
   // validation. This stub is scoped to the test and touches no Analysis model,
   // so the "no model operation for a malformed ID" assertions stay intact.
-  t.mock.method(User, "findById", () => {
+  t.mock.method(User, "findOne", () => {
     const query = {
       select() {
         return query;
@@ -115,7 +115,8 @@ async function assertMalformedIdsRejected(t, method) {
         return Promise.resolve({
           _id: authenticatedUserId,
           role: "user",
-          isActive: true
+          isActive: true,
+          tokenVersion: 0
         }).then(onFulfilled, onRejected);
       }
     };
@@ -136,7 +137,7 @@ async function assertMalformedIdsRejected(t, method) {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const token = jwt.sign(
-    { userId: authenticatedUserId.toString(), role: "user" },
+    { userId: authenticatedUserId.toString(), role: "user", tokenVersion: 0 },
     testJwtSecret,
     { expiresIn: "1h" }
   );
@@ -253,7 +254,7 @@ async function runOwnershipRequest(t, method, actorUserId) {
 
   // The authenticated identity is server-authoritative: the stubbed current
   // User record decides who the caller is, and the token merely names them.
-  t.mock.method(User, "findById", () => {
+  t.mock.method(User, "findOne", () => {
     const query = {
       select() {
         return query;
@@ -262,7 +263,8 @@ async function runOwnershipRequest(t, method, actorUserId) {
         return Promise.resolve({
           _id: actorUserId,
           role: "user",
-          isActive: true
+          isActive: true,
+          tokenVersion: 0
         }).then(onFulfilled, onRejected);
       }
     };
@@ -286,7 +288,7 @@ async function runOwnershipRequest(t, method, actorUserId) {
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
   const token = jwt.sign(
-    { userId: actorUserId.toString(), role: "user" },
+    { userId: actorUserId.toString(), role: "user", tokenVersion: 0 },
     testJwtSecret,
     { expiresIn: "1h" }
   );

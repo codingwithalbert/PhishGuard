@@ -27,7 +27,8 @@ function makeToken(userId, role = "user") {
   return jwt.sign(
     {
       userId: userId.toString(),
-      role
+      role,
+      tokenVersion: 0
     },
     process.env.JWT_SECRET,
     {

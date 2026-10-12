@@ -3,6 +3,17 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { auditLog } = require("../middleware/audit.middleware");
 
+const VALID_TOKEN_VERSION_FILTER = {
+  $or: [
+    { tokenVersion: { $exists: false } },
+    { tokenVersion: { $type: "number" } }
+  ]
+};
+
+function isValidTokenVersion(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
 async function register(req, res, next) {
   try {
     const { name, email, password } = req.body;
@@ -43,9 +54,16 @@ async function login(req, res, next) {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({
+      email,
+      ...VALID_TOKEN_VERSION_FILTER
+    }).select("+password");
 
-    if (!user || !user.isActive) {
+    if (
+      !user ||
+      !user.isActive ||
+      !isValidTokenVersion(user.tokenVersion)
+    ) {
       auditLog("LOGIN_FAILED", req, {
         reason: "invalid_credentials"
       });
@@ -72,7 +90,8 @@ async function login(req, res, next) {
     const token = jwt.sign(
       {
         userId: user._id.toString(),
-        role: user.role
+        role: user.role,
+        tokenVersion: user.tokenVersion
       },
       process.env.JWT_SECRET,
       {

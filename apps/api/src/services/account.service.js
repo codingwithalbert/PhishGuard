@@ -291,6 +291,9 @@ async function changeOwnPassword({
         password: newPasswordHash,
         passwordResetTokenHash: null,
         passwordResetExpiresAt: null
+      },
+      $inc: {
+        tokenVersion: 1
       }
     }
   });

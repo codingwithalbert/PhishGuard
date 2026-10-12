@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const mongoose = require("mongoose");
 
 const User = require("../src/models/User");
 const {
@@ -202,6 +203,35 @@ test("User password-reset fields default to null", async () => {
   assert.equal(user.passwordResetTokenHash, null);
   assert.equal(user.passwordResetExpiresAt, null);
   await user.validate();
+});
+
+test("User tokenVersion defaults to zero for new and hydrated legacy users", async () => {
+  const user = new User(createValidUserData());
+
+  assert.equal(user.tokenVersion, 0);
+  await user.validate();
+
+  const hydrated = User.hydrate({
+    _id: new mongoose.Types.ObjectId(),
+    name: "Legacy User",
+    email: "legacy@example.invalid",
+    password: "hashed-password",
+    role: "user",
+    isActive: true
+  });
+
+  assert.equal(hydrated.tokenVersion, 0);
+});
+
+test("User tokenVersion rejects invalid explicit values", async () => {
+  for (const tokenVersion of [null, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    const user = new User(createValidUserData({ tokenVersion }));
+
+    await assert.rejects(
+      () => user.validate(),
+      (error) => Boolean(error?.errors?.tokenVersion)
+    );
+  }
 });
 
 test("User password-reset fields are excluded from default queries", () => {

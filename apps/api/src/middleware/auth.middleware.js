@@ -17,7 +17,19 @@ const User = require("../models/User");
 //
 // No caching is applied: any memoized user state would reintroduce the stale
 // authorization window this middleware exists to close.
-const USER_STATE_PROJECTION = { _id: 1, role: 1, isActive: 1 };
+const USER_STATE_PROJECTION = {
+  _id: 1,
+  role: 1,
+  isActive: 1,
+  tokenVersion: 1
+};
+
+const VALID_TOKEN_VERSION_FILTER = {
+  $or: [
+    { tokenVersion: { $exists: false } },
+    { tokenVersion: { $type: "number" } }
+  ]
+};
 
 // Same fixed diagnostic vocabulary the global error handler uses, so a thrown
 // error is classified by `instanceof` rather than by its own `name`, which an
@@ -62,6 +74,10 @@ function isValidUserId(value) {
   );
 }
 
+function isValidTokenVersion(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
 function createAuthenticate({ userModel = User } = {}) {
   return async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -99,11 +115,18 @@ function createAuthenticate({ userModel = User } = {}) {
       return rejectToken();
     }
 
+    if (!isValidTokenVersion(decoded?.tokenVersion)) {
+      return rejectToken();
+    }
+
     let user;
 
     try {
       user = await userModel
-        .findById(decoded.userId)
+        .findOne({
+          _id: decoded.userId,
+          ...VALID_TOKEN_VERSION_FILTER
+        })
         .select(USER_STATE_PROJECTION);
     } catch (error) {
       // The generic rejection stays identical so no database or account state
@@ -114,7 +137,12 @@ function createAuthenticate({ userModel = User } = {}) {
       return rejectToken();
     }
 
-    if (!user || user.isActive !== true) {
+    if (
+      !user ||
+      user.isActive !== true ||
+      !isValidTokenVersion(user.tokenVersion) ||
+      user.tokenVersion !== decoded.tokenVersion
+    ) {
       return rejectToken();
     }
 
@@ -133,5 +161,6 @@ const authenticate = createAuthenticate();
 
 module.exports = {
   authenticate,
-  createAuthenticate
+  createAuthenticate,
+  isValidTokenVersion
 };

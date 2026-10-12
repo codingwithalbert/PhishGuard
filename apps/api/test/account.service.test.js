@@ -91,6 +91,10 @@ function createFakeUserModel(documents = []) {
         for (const [field, value] of Object.entries(update.$set)) {
           document[field] = value;
         }
+
+        for (const [field, value] of Object.entries(update.$inc || {})) {
+          document[field] = (document[field] ?? 0) + value;
+        }
       }
 
       return {
@@ -124,6 +128,7 @@ async function createHarness({
     password: passwordHash,
     role,
     isActive,
+    tokenVersion: 0,
     passwordResetTokenHash: resetTokenHash,
     passwordResetExpiresAt: resetExpiresAt,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -655,6 +660,9 @@ test("a successful password change clears outstanding reset state", async () => 
       password: userModel.getDocument(userId).password,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null
+    },
+    $inc: {
+      tokenVersion: 1
     }
   });
 
@@ -665,6 +673,47 @@ test("a successful password change clears outstanding reset state", async () => 
   assert.equal(persisted.email, "account.owner@example.invalid");
   assert.equal(persisted.role, "user");
   assert.equal(persisted.isActive, true);
+  assert.equal(persisted.tokenVersion, 1);
+});
+
+test("concurrent successful password changes do not lose tokenVersion increments", async () => {
+  const { userId, userModel } = await createHarness();
+  const firstPassword = "new-Password-A";
+  const secondPassword = "new-Password-B";
+
+  const outcomes = await Promise.allSettled([
+    changeOwnPassword({
+      userId,
+      currentPassword: CURRENT_PASSWORD,
+      newPassword: firstPassword,
+      userModel
+    }),
+    changeOwnPassword({
+      userId,
+      currentPassword: CURRENT_PASSWORD,
+      newPassword: secondPassword,
+      userModel
+    })
+  ]);
+
+  assert.equal(
+    outcomes.filter((outcome) => outcome.status === "fulfilled").length,
+    2
+  );
+  assert.equal(userModel.updates.length, 2);
+
+  for (const update of userModel.updates) {
+    assert.deepEqual(update.update.$inc, { tokenVersion: 1 });
+  }
+
+  const persisted = userModel.getDocument(userId);
+  const passwordMatches = await Promise.all([
+    bcrypt.compare(firstPassword, persisted.password),
+    bcrypt.compare(secondPassword, persisted.password)
+  ]);
+
+  assert.equal(passwordMatches.filter(Boolean).length, 1);
+  assert.equal(persisted.tokenVersion, 2);
 });
 
 test("a failed password change leaves reset state untouched", async () => {

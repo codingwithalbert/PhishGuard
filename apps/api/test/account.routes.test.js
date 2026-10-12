@@ -122,14 +122,15 @@ before(async () => {
     [ADMIN_USER_ID.toString(), "admin"]
   ]);
 
-  const originalFindById = User.findById.bind(User);
+  const originalFindOne = User.findOne.bind(User);
 
-  User.findById = (id) => {
+  User.findOne = (filter) => {
+    const id = filter?._id;
     const key = String(id);
     const role = activeAccounts.get(key);
 
     if (!role) {
-      return originalFindById(id);
+      return originalFindOne(filter);
     }
 
     const query = {
@@ -140,7 +141,8 @@ before(async () => {
         return Promise.resolve({
           _id: new mongoose.Types.ObjectId(key),
           role,
-          isActive: true
+          isActive: true,
+          tokenVersion: 0
         }).then(onFulfilled, onRejected);
       }
     };
@@ -186,7 +188,7 @@ function resetState() {
 
 function makeToken(userId = USER_ID, role = "user") {
   return jwt.sign(
-    { userId: String(userId), role },
+    { userId: String(userId), role, tokenVersion: 0 },
     testJwtSecret,
     { expiresIn: "1h" }
   );

@@ -36,6 +36,16 @@ const userSchema = new mongoose.Schema(
       default: true
     },
 
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isSafeInteger,
+        message: "Token version must be a nonnegative safe integer"
+      }
+    },
+
     // Password Reset V1 server-controlled reset state.
     // Only the token hash is stored; the raw token is never persisted.
     // Both fields are excluded from default queries so reset state can

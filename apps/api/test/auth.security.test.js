@@ -18,6 +18,12 @@ const WRONG_PASSWORD = crypto.randomBytes(24).toString("hex");
 const RESET_HASH = "auth-security-reset-hash-marker";
 const RESET_TOKEN = "auth-security-raw-reset-marker";
 const EMAIL = "auth.security@example.invalid";
+const TOKEN_VERSION_FILTER = {
+  $or: [
+    { tokenVersion: { $exists: false } },
+    { tokenVersion: { $type: "number" } }
+  ]
+};
 let passwordHash;
 let server;
 let baseUrl;
@@ -60,6 +66,7 @@ function makeAccount(overrides = {}) {
     name: "Auth Security User",
     email: EMAIL,
     password: passwordHash,
+    tokenVersion: 0,
     passwordResetTokenHash: RESET_HASH,
     passwordResetExpiresAt: new Date("2030-01-01T00:00:00.000Z"),
     ...overrides
@@ -69,11 +76,40 @@ function makeAccount(overrides = {}) {
 function stubPersistence(t, account = null) {
   const state = { finds: [], selections: [], ids: [], writes: [], stored: [] };
 
+  function matchesTokenVersionFilter(document, filter) {
+    if (!filter?.$or) {
+      return true;
+    }
+
+    return filter.$or.some((condition) => {
+      const tokenVersion = condition.tokenVersion;
+
+      if (tokenVersion?.$exists === false) {
+        return !Object.prototype.hasOwnProperty.call(document, "tokenVersion");
+      }
+
+      if (tokenVersion?.$type === "number") {
+        return typeof document.tokenVersion === "number";
+      }
+
+      return false;
+    });
+  }
+
   t.mock.method(User, "findOne", (filter) => {
     state.finds.push(filter);
-    const result = account && account.email === filter.email
+    const candidate = account && (
+      account.email === filter.email ||
+      String(account._id) === String(filter._id)
+    )
       ? account
-      : state.stored.find((document) => document.email === filter.email) || null;
+      : state.stored.find((document) => (
+        document.email === filter.email ||
+        String(document._id) === String(filter._id)
+      )) || null;
+    const result = candidate && matchesTokenVersionFilter(candidate, filter)
+      ? candidate
+      : null;
     const query = {
       select(selection) {
         state.selections.push(selection);
@@ -136,7 +172,11 @@ function register(extra = {}) {
 
 function getMe(account) {
   const token = jwt.sign(
-    { userId: String(account._id), role: account.role },
+    {
+      userId: String(account._id),
+      role: account.role,
+      tokenVersion: account.tokenVersion
+    },
     testJwtSecret,
     { expiresIn: "1h" }
   );
@@ -174,7 +214,7 @@ async function assertSafeResponse(response, status, keys, account) {
 test("login with an unknown email returns the safe 401 response", async (t) => {
   const state = stubPersistence(t);
   await assertInvalidLogin(await post("/login", { email: EMAIL, password: PASSWORD }));
-  assert.deepEqual(state.finds, [{ email: EMAIL }]);
+  assert.deepEqual(state.finds, [{ email: EMAIL, ...TOKEN_VERSION_FILTER }]);
   assert.deepEqual(state.selections, ["+password"]);
   assert.equal(state.writes.length, 0);
 });
@@ -183,7 +223,7 @@ test("login with an incorrect password returns the safe 401 response", async (t)
   const account = makeAccount();
   const state = stubPersistence(t, account);
   await assertInvalidLogin(await post("/login", { email: EMAIL, password: WRONG_PASSWORD }));
-  assert.deepEqual(state.finds, [{ email: EMAIL }]);
+  assert.deepEqual(state.finds, [{ email: EMAIL, ...TOKEN_VERSION_FILTER }]);
   assert.deepEqual(state.selections, ["+password"]);
   assert.equal(state.writes.length, 0);
 });
@@ -192,7 +232,7 @@ test("inactive account login returns the safe 401 response", async (t) => {
   const account = makeAccount({ isActive: false });
   const state = stubPersistence(t, account);
   await assertInvalidLogin(await post("/login", { email: EMAIL, password: PASSWORD }));
-  assert.deepEqual(state.finds, [{ email: EMAIL }]);
+  assert.deepEqual(state.finds, [{ email: EMAIL, ...TOKEN_VERSION_FILTER }]);
   assert.equal(account.isActive, false);
   assert.equal(state.writes.length, 0);
 });
@@ -213,7 +253,37 @@ test("GET /api/auth/me rejects an inactive authenticated account in the authenti
     error: "Invalid or expired token"
   });
   assert.equal(handler.mock.callCount(), 0);
-  assert.deepEqual(state.ids, [String(account._id)]);
+  assert.deepEqual(state.finds, [{ _id: String(account._id), ...TOKEN_VERSION_FILTER }]);
+  assert.deepEqual(state.ids, []);
+});
+
+test("login rejects explicitly malformed stored tokenVersion values generically", async (t) => {
+  const account = {
+    _id: new User({
+      name: "Malformed Version User",
+      email: EMAIL,
+      password: passwordHash
+    })._id,
+    name: "Malformed Version User",
+    email: EMAIL,
+    password: passwordHash,
+    role: "user",
+    isActive: true,
+    tokenVersion: "2"
+  };
+  const state = stubPersistence(t, account);
+
+  for (const tokenVersion of ["2", null, [], {}, false]) {
+    account.tokenVersion = tokenVersion;
+
+    await assertInvalidLogin(await post("/login", { email: EMAIL, password: PASSWORD }));
+    assert.equal(state.writes.length, 0);
+  }
+
+  assert.deepEqual(
+    state.finds,
+    Array.from({ length: 5 }, () => ({ email: EMAIL, ...TOKEN_VERSION_FILTER }))
+  );
 });
 
 test("GET /api/auth/me rejects a correctly signed expired JWT with a safe 403 before downstream execution", async (t) => {
@@ -292,9 +362,11 @@ test("successful login returns only safe fields and a JWT without protected cred
   const data = await assertSafeResponse(response, 200, ["success", "message", "token", "user"], account);
   assert.equal(data.message, "Login successful");
   const claims = jwt.verify(data.token, testJwtSecret);
-  assert.deepEqual(Object.keys(claims).sort(), ["exp", "iat", "role", "userId"]);
+  assert.deepEqual(Object.keys(claims).sort(), ["exp", "iat", "role", "tokenVersion", "userId"]);
   assert.equal(claims.userId, String(account._id));
   assert.equal(claims.role, "user");
+  assert.equal(claims.tokenVersion, 0);
+  assert.equal(Number.isSafeInteger(claims.tokenVersion), true);
   assert.equal(claims.exp - claims.iat, 60 * 60);
   assert.deepEqual(state.selections, ["+password"]);
 });
@@ -308,13 +380,11 @@ test("GET /api/auth/me returns only safe fields without protected credential sta
   // account state, and the existing one in `getMe`. The redundant controller
   // lookup is deliberately left in place by this change, so both must resolve
   // the same current account id.
-  assert.deepEqual(state.ids, [
-    String(account._id),
-    String(account._id)
-  ]);
+  assert.deepEqual(state.finds, [{ _id: String(account._id), ...TOKEN_VERSION_FILTER }]);
+  assert.deepEqual(state.ids, [String(account._id)]);
 
   // The authentication lookup is the only projection on this path, and it is
   // restricted to the three fields authorization needs. `getMe` performs no
   // `select()` at all, so no `+password` or reset-state opt-in can occur here.
-  assert.deepEqual(state.selections, [{ _id: 1, role: 1, isActive: 1 }]);
+  assert.deepEqual(state.selections, [{ _id: 1, role: 1, isActive: 1, tokenVersion: 1 }]);
 });

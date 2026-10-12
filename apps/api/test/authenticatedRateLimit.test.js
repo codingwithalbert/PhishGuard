@@ -85,7 +85,8 @@ test.after(() => {
 // Installs a single current-User stub. `roleForId` is read per request, so one
 // mock can serve several identities within a single test without re-mocking.
 function stubActiveUsers(t, roleForId = () => "user") {
-  t.mock.method(User, "findById", (id) => {
+  t.mock.method(User, "findOne", (filter) => {
+    const id = filter?._id;
     const query = {
       select() {
         return query;
@@ -94,7 +95,8 @@ function stubActiveUsers(t, roleForId = () => "user") {
         return Promise.resolve({
           _id: new mongoose.Types.ObjectId(String(id)),
           role: roleForId(String(id)),
-          isActive: true
+          isActive: true,
+          tokenVersion: 0
         }).then(onFulfilled, onRejected);
       }
     };
@@ -113,7 +115,7 @@ function resetKeys(...ids) {
 }
 
 function tokenFor(userId) {
-  return jwt.sign({ userId: String(userId), role: "user" }, testJwtSecret, {
+  return jwt.sign({ userId: String(userId), role: "user", tokenVersion: 0 }, testJwtSecret, {
     expiresIn: "1h"
   });
 }

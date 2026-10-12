@@ -164,6 +164,10 @@ function createFakeUserModel(initialDocuments = []) {
         for (const [field, value] of Object.entries(setValues)) {
           matched[field] = value;
         }
+
+        for (const [field, value] of Object.entries(update?.$inc || {})) {
+          matched[field] = (matched[field] ?? 0) + value;
+        }
       }
 
       const result = {
@@ -185,6 +189,7 @@ function createStoredUser({
   password = bcrypt.hashSync(OLD_PASSWORD, 4),
   role = "user",
   isActive = true,
+  tokenVersion = 0,
   passwordResetTokenHash = null,
   passwordResetExpiresAt = null
 } = {}) {
@@ -195,6 +200,7 @@ function createStoredUser({
     password,
     role,
     isActive,
+    tokenVersion,
     passwordResetTokenHash,
     passwordResetExpiresAt
   };
@@ -308,6 +314,7 @@ test("preparation for an existing account stores only the token hash and expirat
   assert.equal(persisted.password, storedUser.password);
   assert.equal(persisted.role, storedUser.role);
   assert.equal(persisted.isActive, storedUser.isActive);
+  assert.equal(persisted.tokenVersion, 0);
 });
 
 test("the raw reset token is never persisted", async () => {
@@ -500,6 +507,9 @@ test("a valid token resets the password with the existing bcrypt policy", async 
     "passwordResetTokenHash",
     "passwordResetExpiresAt"
   ]);
+  assert.deepEqual(completionUpdate.update.$inc, {
+    tokenVersion: 1
+  });
   assert.equal(
     completionUpdate.filter.passwordResetTokenHash,
     prepared.resetTokenHash
@@ -524,6 +534,7 @@ test("a valid token resets the password with the existing bcrypt policy", async 
     bcrypt.getRounds(persisted.password),
     PASSWORD_HASH_COST
   );
+  assert.equal(persisted.tokenVersion, 1);
   assert.equal(PASSWORD_HASH_COST, 12);
 });
 
@@ -547,6 +558,7 @@ test("reset state is cleared on success and the token cannot be reused", async (
 
   assert.equal(persisted.passwordResetTokenHash, null);
   assert.equal(persisted.passwordResetExpiresAt, null);
+  assert.equal(persisted.tokenVersion, 1);
 
   await assertRejectedWith(
     () =>
@@ -706,6 +718,7 @@ test("competing completion attempts cannot both consume the same token", async (
   );
   assert.equal(persisted.passwordResetTokenHash, null);
   assert.equal(persisted.passwordResetExpiresAt, null);
+  assert.equal(persisted.tokenVersion, 1);
 });
 
 test("role and isActive are never written during a password reset", async () => {

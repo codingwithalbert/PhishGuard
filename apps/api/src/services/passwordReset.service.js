@@ -269,6 +269,9 @@ async function completePasswordReset({
         password: passwordHash,
         passwordResetTokenHash: null,
         passwordResetExpiresAt: null
+      },
+      $inc: {
+        tokenVersion: 1
       }
     }
   );

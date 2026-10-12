@@ -903,7 +903,7 @@ test("existing register, login, me, and RBAC behavior is unchanged", async (t) =
   // must map to an active account. It is resolved as role "user" from the
   // database, which keeps the RBAC denial assertion below meaningful: the
   // authorization decision now comes from server state, not the token claim.
-  t.mock.method(User, "findById", () => {
+  t.mock.method(User, "findOne", () => {
     const query = {
       select() {
         return query;
@@ -912,7 +912,8 @@ test("existing register, login, me, and RBAC behavior is unchanged", async (t) =
         return Promise.resolve({
           _id: RESET_USER_ID,
           role: "user",
-          isActive: true
+          isActive: true,
+          tokenVersion: 0
         }).then(onFulfilled, onRejected);
       }
     };
@@ -923,7 +924,8 @@ test("existing register, login, me, and RBAC behavior is unchanged", async (t) =
   const userToken = jwt.sign(
     {
       userId: RESET_USER_ID.toString(),
-      role: "user"
+      role: "user",
+      tokenVersion: 0
     },
     testJwtSecret,
     { expiresIn: "1h" }

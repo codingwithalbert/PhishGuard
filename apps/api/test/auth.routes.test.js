@@ -14,7 +14,8 @@ function makeToken(role) {
   return jwt.sign(
     {
       userId: `test-${role}-id`,
-      role
+      role,
+      tokenVersion: 0
     },
     process.env.JWT_SECRET,
     {
@@ -27,7 +28,8 @@ function makeInvalidToken() {
   return jwt.sign(
     {
       userId: "test-user-id",
-      role: "admin"
+      role: "admin",
+      tokenVersion: 0
     },
     "not-the-server-secret",
     {

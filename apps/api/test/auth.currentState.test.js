@@ -36,12 +36,39 @@ const MISSING_TOKEN_MESSAGE = "Authentication required";
 function createFakeUserModel(usersById) {
   const state = { lookups: [], projections: [] };
 
+  function matchesTokenVersionFilter(user, filter) {
+    if (!filter?.$or) {
+      return true;
+    }
+
+    return filter.$or.some((condition) => {
+      const tokenVersion = condition.tokenVersion;
+
+      if (tokenVersion?.$exists === false) {
+        return !Object.prototype.hasOwnProperty.call(user, "tokenVersion");
+      }
+
+      if (tokenVersion?.$type === "number") {
+        return typeof user.tokenVersion === "number";
+      }
+
+      return false;
+    });
+  }
+
   state.model = {
-    findById(id) {
+    findOne(filter) {
+      const id = filter?._id;
       state.lookups.push(String(id));
 
-      const found =
+      const stored =
         typeof id === "string" ? usersById[String(id)] ?? null : null;
+      const found = stored && matchesTokenVersionFilter(stored, filter)
+        ? {
+          tokenVersion: 0,
+          ...stored
+        }
+        : null;
 
       return {
         select(projection) {
@@ -161,7 +188,7 @@ test.after(async () => {
 });
 
 function signToken(claims = {}, options = {}) {
-  return jwt.sign(claims, testJwtSecret, options);
+  return jwt.sign({ tokenVersion: 0, ...claims }, testJwtSecret, options);
 }
 
 function authHeaders(token) {
@@ -239,6 +266,124 @@ test("1b. the database role overrides a differing token role claim for an active
 
   assert.equal(status, 200);
   assert.equal(body.observedUser.role, "staff");
+});
+
+test("1c. a valid tokenVersion matching database state succeeds", async () => {
+  const userId = new mongoose.Types.ObjectId();
+  const harness = createHarness({
+    usersById: {
+      [userId.toString()]: {
+        _id: userId,
+        role: "user",
+        isActive: true,
+        tokenVersion: 3
+      }
+    }
+  });
+
+  const token = signToken({
+    userId: userId.toString(),
+    role: "admin",
+    tokenVersion: 3
+  });
+  const { status, body } = await serve(harness, "/protected", {
+    headers: authHeaders(token)
+  });
+
+  assert.equal(status, 200);
+  assert.deepEqual(body.observedUser, {
+    userId: userId.toString(),
+    role: "user"
+  });
+  assert.equal(harness.fake.lookups.length, 1);
+});
+
+test("1d. stale, missing, and malformed tokenVersion claims are rejected", async () => {
+  const userId = new mongoose.Types.ObjectId();
+
+  for (const [label, tokenVersion] of [
+    ["stale", 1],
+    ["missing", undefined],
+    ["negative", -1],
+    ["fractional", 2.5],
+    ["string", "2"],
+    ["null", null],
+    ["unsafe", Number.MAX_SAFE_INTEGER + 1]
+  ]) {
+    const harness = createHarness({
+      usersById: {
+        [userId.toString()]: {
+          _id: userId,
+          role: "user",
+          isActive: true,
+          tokenVersion: 2
+        }
+      }
+    });
+    const token = signToken({
+      userId: userId.toString(),
+      role: "user",
+      tokenVersion
+    });
+
+    const { status, body } = await serve(harness, "/protected", {
+      headers: authHeaders(token)
+    });
+
+    assert.equal(status, 403, label);
+    assert.deepEqual(body, { success: false, error: INVALID_TOKEN_MESSAGE });
+    assert.equal(harness.protectedHandlerCalls, 0, label);
+  }
+});
+
+test("1e. malformed stored tokenVersion values fail closed", async () => {
+  const userId = new mongoose.Types.ObjectId();
+
+  for (const storedTokenVersion of ["2", null, [], {}, 1.5, -1]) {
+    const harness = createHarness({
+      usersById: {
+        [userId.toString()]: {
+          _id: userId,
+          role: "user",
+          isActive: true,
+          tokenVersion: storedTokenVersion
+        }
+      }
+    });
+    const token = signToken({
+      userId: userId.toString(),
+      role: "user",
+      tokenVersion: 2
+    });
+
+    const { status, body } = await serve(harness, "/protected", {
+      headers: authHeaders(token)
+    });
+
+    assert.equal(status, 403, String(storedTokenVersion));
+    assert.deepEqual(body, { success: false, error: INVALID_TOKEN_MESSAGE });
+    assert.equal(harness.protectedHandlerCalls, 0);
+  }
+});
+
+test("1f. legacy stored users without tokenVersion hydrate as version 0", async () => {
+  const userId = new mongoose.Types.ObjectId();
+  const harness = createHarness({
+    usersById: {
+      [userId.toString()]: {
+        _id: userId,
+        role: "user",
+        isActive: true
+      }
+    }
+  });
+
+  const token = signToken({ userId: userId.toString(), role: "user" });
+  const { status } = await serve(harness, "/protected", {
+    headers: authHeaders(token)
+  });
+
+  assert.equal(status, 200);
 });
 
 test("2. a valid token for a nonexistent user is rejected and the handler never runs", async () => {
@@ -534,7 +679,7 @@ test("11. no protected handler runs after any authentication rejection", async (
   }
 });
 
-test("12. the User lookup projection is limited to _id, role and isActive", async () => {
+test("12. the User lookup projection is limited to auth state fields", async () => {
   const userId = new mongoose.Types.ObjectId();
   const harness = createHarness({
     usersById: {
@@ -557,7 +702,7 @@ test("12. the User lookup projection is limited to _id, role and isActive", asyn
 
   assert.equal(status, 200);
   assert.deepEqual(harness.fake.projections, [
-    { _id: 1, role: 1, isActive: 1 }
+    { _id: 1, role: 1, isActive: 1, tokenVersion: 1 }
   ]);
   assert.deepEqual(Object.keys(body.observedUser).sort(), ["role", "userId"]);
   assert.equal(JSON.stringify(body).includes("should-never-be-selected"), false);
@@ -566,7 +711,7 @@ test("12. the User lookup projection is limited to _id, role and isActive", asyn
 test("an unexpected database failure is reported as a safe 403 without leaking detail", async () => {
   const app = express();
   const exploding = {
-    findById() {
+    findOne() {
       return {
         select() {
           // A real rejected promise, so `await` settles and the middleware's
@@ -616,11 +761,11 @@ test("an unexpected database failure is reported as a safe 403 without leaking d
   }
 });
 
-// Builds a User model whose findById rejects with a deliberately
+// Builds a User model whose findOne rejects with a deliberately
 // sensitive-looking error, so the negative logging assertions are meaningful.
 function createExplodingUserModel(thrownError) {
   return {
-    findById() {
+    findOne() {
       return {
         select() {
           // A real rejected promise, so `await` settles and the middleware's
@@ -839,7 +984,8 @@ test("no User caching is introduced: two requests each perform their own lookup"
       [userId.toString()]: {
         _id: userId,
         role: "user",
-        isActive: true
+        isActive: true,
+        tokenVersion: 0
       }
     }
   });
