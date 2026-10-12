@@ -390,6 +390,69 @@ test("normal users are denied IT review operations while staff and admin access 
   assertNoStore(adminAssignment);
 });
 
+test("students are rejected from every IT review endpoint before any service call", async () => {
+  resetTestState();
+
+  // Every staff/admin review route must deny the `user` role at the router
+  // layer, ahead of validation and controller execution, so the mocked
+  // service never observes a student-initiated review operation.
+  const reviewEndpoints = [
+    { method: "GET", path: "/api/reports/review" },
+    { method: "GET", path: "/api/reports/review/assignees" },
+    { method: "GET", path: `/api/reports/review/${reportId}` },
+    { method: "GET", path: `/api/reports/review/${reportId}/messages` },
+    {
+      method: "POST",
+      path: `/api/reports/review/${reportId}/messages`,
+      body: { message: "Student must not reach this handler" }
+    },
+    { method: "PATCH", path: `/api/reports/review/${reportId}/claim` },
+    {
+      method: "PATCH",
+      path: `/api/reports/review/${reportId}/assignment`,
+      body: { assignedTo: assigneeId }
+    },
+    {
+      method: "PATCH",
+      path: `/api/reports/review/${reportId}/priority`,
+      body: { priority: "high" }
+    },
+    {
+      method: "PATCH",
+      path: `/api/reports/review/${reportId}/start`,
+      body: {}
+    },
+    {
+      method: "PATCH",
+      path: `/api/reports/review/${reportId}/complete`,
+      body: { assessment: "phishing" }
+    }
+  ];
+
+  for (const endpoint of reviewEndpoints) {
+    const response = await request(endpoint.path, {
+      method: endpoint.method,
+      headers: authHeaders("user"),
+      ...(endpoint.body === undefined
+        ? {}
+        : { body: endpoint.body })
+    });
+
+    assert.equal(response.status, 403, endpoint.path);
+    assert.deepEqual(await response.json(), {
+      success: false,
+      error: "You do not have permission to access this resource"
+    });
+    assertNoStore(response);
+  }
+
+  assert.equal(
+    calls.length,
+    0,
+    "student review requests must be rejected before controller/service execution"
+  );
+});
+
 test("static review routes are ordered before generic report routes", async () => {
   resetTestState();
 

@@ -717,6 +717,18 @@ async function assertServiceError(promise, code, status) {
   );
 }
 
+// Captures the thrown service error so a test can compare the full response
+// contract (message, code, status) between two different access attempts.
+async function captureServiceError(promise) {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+
+  throw new Error("Expected a ReportingServiceError to be thrown");
+}
+
 test("Report creation uses owned Analysis data and server-controlled initial state", async () => {
   const owner = makeUser({ name: "Owner" });
   const analysis = makeAnalysis({
@@ -1088,6 +1100,157 @@ test("own Report messages are chronological, server-derived, and ownership-scope
     REPORTING_ERROR_CODES.NOT_FOUND,
     404
   );
+});
+
+test("ownership regression: personal Report list contains only owned Reports", async () => {
+  const owner = makeUser();
+  const intruder = makeUser();
+  const ownerOlder = makeReport({
+    user: owner._id,
+    createdAt: new Date("2026-01-01T00:00:00.000Z")
+  });
+  const ownerNewer = makeReport({
+    user: owner._id,
+    createdAt: new Date("2026-01-02T00:00:00.000Z")
+  });
+  const intruderReport = makeReport({
+    user: intruder._id,
+    createdAt: new Date("2026-01-03T00:00:00.000Z")
+  });
+  const harness = createMemoryModels({
+    users: [owner, intruder],
+    reports: [ownerOlder, ownerNewer, intruderReport]
+  });
+  const options = serviceOptions(harness);
+
+  const ownerList = await getOwnReports(owner._id, options);
+  assert.deepEqual(
+    ownerList.map((report) => report.id),
+    [ownerNewer._id.toString(), ownerOlder._id.toString()]
+  );
+
+  const intruderList = await getOwnReports(intruder._id, options);
+  assert.deepEqual(
+    intruderList.map((report) => report.id),
+    [intruderReport._id.toString()]
+  );
+});
+
+test("ownership regression: students cannot read another user's Report or messages", async () => {
+  const owner = makeUser();
+  const intruder = makeUser();
+  const ownerReport = makeReport({ user: owner._id });
+  const ownerMessage = {
+    _id: createObjectId(),
+    report: ownerReport._id,
+    sender: owner._id,
+    senderRole: "user",
+    message: "Owner-only context",
+    createdAt: new Date("2026-01-01T00:00:00.000Z")
+  };
+  const harness = createMemoryModels({
+    users: [owner, intruder],
+    reports: [ownerReport],
+    messages: [ownerMessage]
+  });
+  const options = serviceOptions(harness);
+
+  await assertServiceError(
+    getOwnReport(intruder._id, ownerReport._id, options),
+    REPORTING_ERROR_CODES.NOT_FOUND,
+    404
+  );
+
+  await assertServiceError(
+    getOwnReportMessages(intruder._id, ownerReport._id, options),
+    REPORTING_ERROR_CODES.NOT_FOUND,
+    404
+  );
+
+  // The owner still reads both, so the denials above prove scoping rather
+  // than a broken read path.
+  const ownerRead = await getOwnReport(owner._id, ownerReport._id, options);
+  assert.equal(ownerRead.id, ownerReport._id.toString());
+
+  const ownerMessages = await getOwnReportMessages(
+    owner._id,
+    ownerReport._id,
+    options
+  );
+  assert.deepEqual(
+    ownerMessages.map((message) => message.id),
+    [ownerMessage._id.toString()]
+  );
+});
+
+test("ownership regression: students cannot post messages to another user's Report", async () => {
+  const owner = makeUser();
+  const intruder = makeUser();
+  const ownerReport = makeReport({
+    user: owner._id,
+    status: "submitted"
+  });
+  const harness = createMemoryModels({
+    users: [owner, intruder],
+    reports: [ownerReport],
+    messages: []
+  });
+  const options = serviceOptions(harness);
+
+  await assertServiceError(
+    createOwnReportMessage(
+      {
+        userId: intruder._id,
+        reportId: ownerReport._id,
+        message: "Unauthorized reply",
+        actorRole: "user"
+      },
+      options
+    ),
+    REPORTING_ERROR_CODES.NOT_FOUND,
+    404
+  );
+
+  assert.equal(harness.state.messages.length, 0);
+});
+
+test("ownership regression: non-owned and nonexistent Report IDs return the same not-found response", async () => {
+  const owner = makeUser();
+  const intruder = makeUser();
+  const ownerReport = makeReport({ user: owner._id });
+  const harness = createMemoryModels({
+    users: [owner, intruder],
+    reports: [ownerReport],
+    messages: []
+  });
+  const options = serviceOptions(harness);
+  const nonexistentId = createObjectId();
+
+  const nonOwnedRead = await captureServiceError(
+    getOwnReport(intruder._id, ownerReport._id, options)
+  );
+  const nonexistentRead = await captureServiceError(
+    getOwnReport(intruder._id, nonexistentId, options)
+  );
+
+  assert.ok(nonOwnedRead instanceof ReportingServiceError);
+  assert.ok(nonexistentRead instanceof ReportingServiceError);
+  assert.equal(nonOwnedRead.message, nonexistentRead.message);
+  assert.equal(nonOwnedRead.code, nonexistentRead.code);
+  assert.equal(nonOwnedRead.status, nonexistentRead.status);
+  assert.equal(nonOwnedRead.message, "Report not found");
+
+  const nonOwnedMessages = await captureServiceError(
+    getOwnReportMessages(intruder._id, ownerReport._id, options)
+  );
+  const nonexistentMessages = await captureServiceError(
+    getOwnReportMessages(intruder._id, nonexistentId, options)
+  );
+
+  assert.equal(nonOwnedMessages.message, nonexistentMessages.message);
+  assert.equal(nonOwnedMessages.code, nonexistentMessages.code);
+  assert.equal(nonOwnedMessages.status, nonexistentMessages.status);
+  assert.equal(nonOwnedMessages.message, "Report not found");
 });
 
 test("completed Reports reject new messages but remain readable", async () => {
