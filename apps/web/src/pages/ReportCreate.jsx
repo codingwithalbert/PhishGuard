@@ -216,6 +216,7 @@ function ReportCreatePage() {
     <main
       className="reports-page student-reporting report-create-page"
       id="main-content"
+      tabIndex={-1}
       aria-busy={loading}
     >
 

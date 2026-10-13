@@ -211,7 +211,11 @@ function AwarenessAssessment() {
   }
 
   return (
-    <main className="awareness-page assessment-page" id="main-content">
+    <main
+      className="awareness-page assessment-page"
+      id="main-content"
+      tabIndex={-1}
+    >
       <PageHeader
         motion
         title="Awareness Assessment"

@@ -255,7 +255,11 @@ function TrainingPage() {
     : null;
 
   return (
-    <main className="awareness-page training-page" id="main-content">
+    <main
+      className="awareness-page training-page"
+      id="main-content"
+      tabIndex={-1}
+    >
       <PageHeader
         motion
         title="Training Exposure"

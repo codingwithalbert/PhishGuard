@@ -331,7 +331,12 @@ function ResearchAnalyticsPage() {
         cohort.totalEligibleParticipants);
 
   return (
-    <main className="awareness-page research-page" id="main-content" aria-busy={loading}>
+    <main
+      className="awareness-page research-page"
+      id="main-content"
+      tabIndex={-1}
+      aria-busy={loading}
+    >
       <PageHeader
         title="Research Analytics"
         description={

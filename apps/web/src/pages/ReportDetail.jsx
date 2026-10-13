@@ -252,6 +252,7 @@ function ReportDetailPage() {
     <main
       className="reports-page student-reporting report-detail-page"
       id="main-content"
+      tabIndex={-1}
       aria-busy={loading}
     >
 

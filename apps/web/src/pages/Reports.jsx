@@ -125,7 +125,12 @@ function ReportsPage() {
   }, [loadReports]);
 
   return (
-    <main className="reports-page student-reporting" id="main-content" aria-busy={loading}>
+    <main
+      className="reports-page student-reporting"
+      id="main-content"
+      tabIndex={-1}
+      aria-busy={loading}
+    >
       <PageHeader
         title="Reports"
         description={

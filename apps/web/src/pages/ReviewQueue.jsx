@@ -146,7 +146,12 @@ function ReviewQueuePage() {
   }, [loadQueue]);
 
   return (
-    <main className="reports-page review-page" id="main-content" aria-busy={loading}>
+    <main
+      className="reports-page review-page"
+      id="main-content"
+      tabIndex={-1}
+      aria-busy={loading}
+    >
       <PageHeader
         title="IT Review Queue"
         description={

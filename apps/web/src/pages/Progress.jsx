@@ -467,7 +467,12 @@ function ProgressPage() {
     (!hasAwarenessProgress || !hasPhishingProgress || !hasTrainingProgress);
 
   return (
-    <main className="awareness-page progress-page" id="main-content" aria-busy={loading}>
+    <main
+      className="awareness-page progress-page"
+      id="main-content"
+      tabIndex={-1}
+      aria-busy={loading}
+    >
       <PageHeader
         motion
         title="Personal Progress"

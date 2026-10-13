@@ -306,7 +306,7 @@ function Dashboard() {
   );
 
   return (
-    <main id="main-content">
+    <main id="main-content" tabIndex={-1}>
       {message && (
         <p className="success-message">
           {message}

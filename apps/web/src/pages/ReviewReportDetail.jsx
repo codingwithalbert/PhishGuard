@@ -702,6 +702,7 @@ function ReviewReportDetailPage() {
     <main
       className="reports-page review-page review-detail-page"
       id="main-content"
+      tabIndex={-1}
       aria-busy={loading}
     >
 

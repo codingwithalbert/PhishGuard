@@ -479,7 +479,12 @@ function ProfilePage() {
   }
 
   return (
-    <main className="awareness-page profile-page" id="main-content" aria-busy={loading}>
+    <main
+      className="awareness-page profile-page"
+      id="main-content"
+      tabIndex={-1}
+      aria-busy={loading}
+    >
       <PageHeader
         title="Profile"
         description={
