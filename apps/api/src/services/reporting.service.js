@@ -804,6 +804,14 @@ async function createReviewReportMessage(
   const deps = resolveDependencies(options);
   assertMessageActorRole(actorRole);
 
+  // Defense in depth: the review message route already restricts reviewers,
+  // but the service itself must never persist a message from a non-reviewer.
+  if (!REVIEWER_ROLES.has(actorRole)) {
+    throw forbidden(
+      "Only staff or admin may send messages on a review report"
+    );
+  }
+
   const report = await findReportState(deps, reportId);
 
   if (!report) {
@@ -842,11 +850,19 @@ async function createReviewReportMessage(
 async function claimReviewReport(
   {
     reportId,
-    actorId
+    actorId,
+    actorRole
   } = {},
   options = {}
 ) {
   const deps = resolveDependencies(options);
+
+  // Defense in depth: the claim route already restricts reviewers, but the
+  // service must fail closed when the actor role is missing or not a reviewer.
+  if (!REVIEWER_ROLES.has(actorRole)) {
+    throw forbidden("Only staff or admin may claim a report");
+  }
+
   const updatedReport = await runConditionalReportUpdate(deps, {
     reportId,
     filter: {
@@ -868,11 +884,20 @@ async function claimReviewReport(
 async function assignReviewReport(
   {
     reportId,
-    assignedTo
+    assignedTo,
+    actorRole
   } = {},
   options = {}
 ) {
   const deps = resolveDependencies(options);
+
+  // Defense in depth: the assignment route already restricts this to admin,
+  // but the service must fail closed for staff, user, or a missing role.
+  // Assignment-target validation below is unchanged.
+  if (actorRole !== "admin") {
+    throw forbidden("Only admin may assign a report");
+  }
+
   const report = await findReportState(deps, reportId);
 
   if (!report) {
@@ -929,11 +954,21 @@ async function getAssignmentCandidates(options = {}) {
 async function updateReviewReportPriority(
   {
     reportId,
-    priority
+    priority,
+    actorRole
   } = {},
   options = {}
 ) {
   const deps = resolveDependencies(options);
+
+  // Defense in depth: the priority route already restricts reviewers, but the
+  // service must fail closed when the actor role is missing or not a reviewer.
+  if (!REVIEWER_ROLES.has(actorRole)) {
+    throw forbidden(
+      "Only staff or admin may update report priority"
+    );
+  }
+
   const updatedReport = await runConditionalReportUpdate(deps, {
     reportId,
     filter: {

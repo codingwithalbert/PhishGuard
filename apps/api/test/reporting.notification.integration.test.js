@@ -764,7 +764,8 @@ test("claim action causes zero notification attempts", async () => {
   await claimReviewReport(
     {
       reportId: reportId.toString(),
-      actorId: staffId.toString()
+      actorId: staffId.toString(),
+      actorRole: "staff"
     },
     {
       models: {
@@ -797,7 +798,8 @@ test("assignment/reassignment causes zero notification attempts", async () => {
   await assignReviewReport(
     {
       reportId: reportId.toString(),
-      assignedTo: targetStaffId.toString()
+      assignedTo: targetStaffId.toString(),
+      actorRole: "admin"
     },
     {
       models: {
@@ -836,7 +838,8 @@ test("priority change causes zero notification attempts", async () => {
   await updateReviewReportPriority(
     {
       reportId: reportId.toString(),
-      priority: "high"
+      priority: "high",
+      actorRole: "staff"
     },
     {
       models: {

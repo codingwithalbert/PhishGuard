@@ -187,7 +187,8 @@ function createReportingController(service = reportingService) {
     try {
       const report = await service.claimReviewReport({
         reportId: req.params.reportId,
-        actorId: req.user.userId
+        actorId: req.user.userId,
+        actorRole: req.user.role
       });
 
       return res.status(200).json({
@@ -204,7 +205,8 @@ function createReportingController(service = reportingService) {
     try {
       const report = await service.assignReviewReport({
         reportId: req.params.reportId,
-        assignedTo: req.body.assignedTo
+        assignedTo: req.body.assignedTo,
+        actorRole: req.user.role
       });
 
       return res.status(200).json({
@@ -221,7 +223,8 @@ function createReportingController(service = reportingService) {
     try {
       const report = await service.updateReviewReportPriority({
         reportId: req.params.reportId,
-        priority: req.body.priority
+        priority: req.body.priority,
+        actorRole: req.user.role
       });
 
       return res.status(200).json({

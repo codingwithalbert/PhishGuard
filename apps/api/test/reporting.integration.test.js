@@ -936,7 +936,8 @@ if (!integrationEnabled) {
 
           await assignReviewReport({
             reportId: highReport._id,
-            assignedTo: staffA._id
+            assignedTo: staffA._id,
+            actorRole: "admin"
           });
 
           const queue = await getReviewQueue();
@@ -1038,11 +1039,13 @@ if (!integrationEnabled) {
           const claimResults = await Promise.allSettled([
             claimReviewReport({
               reportId: claimReport._id,
-              actorId: staffA._id
+              actorId: staffA._id,
+              actorRole: "staff"
             }),
             claimReviewReport({
               reportId: claimReport._id,
-              actorId: staffB._id
+              actorId: staffB._id,
+              actorRole: "staff"
             })
           ]);
           const successfulClaim = claimResults.find(
@@ -1061,7 +1064,8 @@ if (!integrationEnabled) {
 
           const assignedReport = await assignReviewReport({
             reportId: primaryReport._id,
-            assignedTo: staffA._id
+            assignedTo: staffA._id,
+            actorRole: "admin"
           });
           assert.equal(
             assignedReport.assignedTo.id,
@@ -1070,7 +1074,8 @@ if (!integrationEnabled) {
 
           const adminAssigned = await assignReviewReport({
             reportId: primaryReport._id,
-            assignedTo: adminReviewer._id
+            assignedTo: adminReviewer._id,
+            actorRole: "admin"
           });
           assert.equal(
             adminAssigned.assignedTo.id,
@@ -1080,7 +1085,8 @@ if (!integrationEnabled) {
           await assertServiceError(
             assignReviewReport({
               reportId: primaryReport._id,
-              assignedTo: normalTarget._id
+              assignedTo: normalTarget._id,
+              actorRole: "admin"
             }),
             REPORTING_ERROR_CODES.INVALID_ASSIGNEE,
             400
@@ -1088,7 +1094,8 @@ if (!integrationEnabled) {
           await assertServiceError(
             assignReviewReport({
               reportId: primaryReport._id,
-              assignedTo: inactiveStaff._id
+              assignedTo: inactiveStaff._id,
+              actorRole: "admin"
             }),
             REPORTING_ERROR_CODES.INVALID_ASSIGNEE,
             400
@@ -1096,7 +1103,8 @@ if (!integrationEnabled) {
           await assertServiceError(
             assignReviewReport({
               reportId: primaryReport._id,
-              assignedTo: new mongoose.Types.ObjectId()
+              assignedTo: new mongoose.Types.ObjectId(),
+              actorRole: "admin"
             }),
             REPORTING_ERROR_CODES.NOT_FOUND,
             404
@@ -1105,7 +1113,8 @@ if (!integrationEnabled) {
           const priorityUpdated =
             await updateReviewReportPriority({
               reportId: primaryReport._id,
-              priority: "high"
+              priority: "high",
+              actorRole: "staff"
             });
           assert.equal(priorityUpdated.priority, "high");
 
@@ -1136,7 +1145,8 @@ if (!integrationEnabled) {
           await assertServiceError(
             updateReviewReportPriority({
               reportId: primaryReport._id,
-              priority: "low"
+              priority: "low",
+              actorRole: "staff"
             }),
             REPORTING_ERROR_CODES.CONFLICT,
             409
@@ -1144,7 +1154,8 @@ if (!integrationEnabled) {
           await assertServiceError(
             assignReviewReport({
               reportId: primaryReport._id,
-              assignedTo: staffA._id
+              assignedTo: staffA._id,
+              actorRole: "admin"
             }),
             REPORTING_ERROR_CODES.CONFLICT,
             409
@@ -1177,7 +1188,8 @@ if (!integrationEnabled) {
 
           await assignReviewReport({
             reportId: sourceReport._id,
-            assignedTo: staffA._id
+            assignedTo: staffA._id,
+            actorRole: "admin"
           });
           const sourceCompleted = await completeReviewReport({
             reportId: sourceReport._id,

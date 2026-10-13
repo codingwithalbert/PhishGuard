@@ -1474,7 +1474,11 @@ test("claim is self-service, preserves workflow fields, and is concurrency-safe"
   const options = serviceOptions(harness);
 
   const claimed = await claimReviewReport(
-    { reportId: report._id, actorId: staff._id },
+    {
+      reportId: report._id,
+      actorId: staff._id,
+      actorRole: "staff"
+    },
     options
   );
   assert.equal(claimed.assignedTo.id, staff._id.toString());
@@ -1484,7 +1488,11 @@ test("claim is self-service, preserves workflow fields, and is concurrency-safe"
 
   await assertServiceError(
     claimReviewReport(
-      { reportId: report._id, actorId: otherStaff._id },
+      {
+        reportId: report._id,
+        actorId: otherStaff._id,
+        actorRole: "staff"
+      },
       options
     ),
     REPORTING_ERROR_CODES.CONFLICT,
@@ -1495,7 +1503,11 @@ test("claim is self-service, preserves workflow fields, and is concurrency-safe"
   report.assignedTo = null;
   await assertServiceError(
     claimReviewReport(
-      { reportId: report._id, actorId: staff._id },
+      {
+        reportId: report._id,
+        actorId: staff._id,
+        actorRole: "staff"
+      },
       options
     ),
     REPORTING_ERROR_CODES.CONFLICT,
@@ -1509,11 +1521,19 @@ test("claim is self-service, preserves workflow fields, and is concurrency-safe"
   harness.state.reports.push(raceReport);
   const results = await Promise.allSettled([
     claimReviewReport(
-      { reportId: raceReport._id, actorId: staff._id },
+      {
+        reportId: raceReport._id,
+        actorId: staff._id,
+        actorRole: "staff"
+      },
       options
     ),
     claimReviewReport(
-      { reportId: raceReport._id, actorId: otherStaff._id },
+      {
+        reportId: raceReport._id,
+        actorId: otherStaff._id,
+        actorRole: "staff"
+      },
       options
     )
   ]);
@@ -1549,20 +1569,32 @@ test("admin assignment validates active staff/admin targets and supports reassig
   const options = serviceOptions(harness);
 
   const assignedToStaff = await assignReviewReport(
-    { reportId: report._id, assignedTo: staff._id },
+    {
+      reportId: report._id,
+      assignedTo: staff._id,
+      actorRole: "admin"
+    },
     options
   );
   assert.equal(assignedToStaff.assignedTo.id, staff._id.toString());
 
   const assignedToAdmin = await assignReviewReport(
-    { reportId: report._id, assignedTo: admin._id },
+    {
+      reportId: report._id,
+      assignedTo: admin._id,
+      actorRole: "admin"
+    },
     options
   );
   assert.equal(assignedToAdmin.assignedTo.id, admin._id.toString());
 
   await assertServiceError(
     assignReviewReport(
-      { reportId: report._id, assignedTo: normal._id },
+      {
+        reportId: report._id,
+        assignedTo: normal._id,
+        actorRole: "admin"
+      },
       options
     ),
     REPORTING_ERROR_CODES.INVALID_ASSIGNEE,
@@ -1570,7 +1602,11 @@ test("admin assignment validates active staff/admin targets and supports reassig
   );
   await assertServiceError(
     assignReviewReport(
-      { reportId: report._id, assignedTo: inactive._id },
+      {
+        reportId: report._id,
+        assignedTo: inactive._id,
+        actorRole: "admin"
+      },
       options
     ),
     REPORTING_ERROR_CODES.INVALID_ASSIGNEE,
@@ -1578,7 +1614,11 @@ test("admin assignment validates active staff/admin targets and supports reassig
   );
   await assertServiceError(
     assignReviewReport(
-      { reportId: report._id, assignedTo: createObjectId() },
+      {
+        reportId: report._id,
+        assignedTo: createObjectId(),
+        actorRole: "admin"
+      },
       options
     ),
     REPORTING_ERROR_CODES.NOT_FOUND,
@@ -1588,7 +1628,11 @@ test("admin assignment validates active staff/admin targets and supports reassig
   report.status = "completed";
   await assertServiceError(
     assignReviewReport(
-      { reportId: report._id, assignedTo: staff._id },
+      {
+        reportId: report._id,
+        assignedTo: staff._id,
+        actorRole: "admin"
+      },
       options
     ),
     REPORTING_ERROR_CODES.CONFLICT,
@@ -1654,7 +1698,11 @@ test("priority updates are unfinished-only and change no other field", async () 
   const before = { ...report };
 
   const updated = await updateReviewReportPriority(
-    { reportId: report._id, priority: "high" },
+    {
+      reportId: report._id,
+      priority: "high",
+      actorRole: "staff"
+    },
     options
   );
   assert.equal(updated.priority, "high");
@@ -1678,12 +1726,184 @@ test("priority updates are unfinished-only and change no other field", async () 
   report.status = "completed";
   await assertServiceError(
     updateReviewReportPriority(
-      { reportId: report._id, priority: "low" },
+      {
+        reportId: report._id,
+        priority: "low",
+        actorRole: "staff"
+      },
       options
     ),
     REPORTING_ERROR_CODES.CONFLICT,
     409
   );
+});
+
+test("review mutations fail closed for non-reviewer and missing actor roles", async () => {
+  const reporter = makeUser();
+  const staff = makeUser({ role: "staff" });
+  const admin = makeUser({ role: "admin" });
+  const report = makeReport({
+    user: reporter._id,
+    status: "submitted",
+    assignedTo: null
+  });
+  const harness = createMemoryModels({
+    users: [reporter, staff, admin],
+    reports: [report]
+  });
+  const options = serviceOptions(harness);
+
+  // A "user" actor still passes the message actor check, but it is not a
+  // reviewer, so the review message must be rejected.
+  await assertServiceError(
+    createReviewReportMessage(
+      {
+        reportId: report._id,
+        actorId: reporter._id,
+        actorRole: "user",
+        message: "Not allowed"
+      },
+      options
+    ),
+    REPORTING_ERROR_CODES.FORBIDDEN,
+    403
+  );
+
+  // Invalid or missing message actor roles keep the invalid-actor contract.
+  for (const actorRole of [undefined, "invalid_role"]) {
+    await assertServiceError(
+      createReviewReportMessage(
+        {
+          reportId: report._id,
+          actorId: reporter._id,
+          actorRole,
+          message: "Not allowed"
+        },
+        options
+      ),
+      REPORTING_ERROR_CODES.INVALID_ACTOR,
+      403
+    );
+  }
+
+  // Claim and priority updates require a reviewer role, and assignment
+  // requires admin. Missing, invalid, and user roles all fail closed.
+  for (const actorRole of [undefined, "invalid_role", "user"]) {
+    await assertServiceError(
+      claimReviewReport(
+        {
+          reportId: report._id,
+          actorId: reporter._id,
+          actorRole
+        },
+        options
+      ),
+      REPORTING_ERROR_CODES.FORBIDDEN,
+      403
+    );
+
+    await assertServiceError(
+      assignReviewReport(
+        {
+          reportId: report._id,
+          assignedTo: staff._id,
+          actorRole
+        },
+        options
+      ),
+      REPORTING_ERROR_CODES.FORBIDDEN,
+      403
+    );
+
+    await assertServiceError(
+      updateReviewReportPriority(
+        {
+          reportId: report._id,
+          priority: "high",
+          actorRole
+        },
+        options
+      ),
+      REPORTING_ERROR_CODES.FORBIDDEN,
+      403
+    );
+  }
+
+  // Staff may claim and update priority, but never reassign a report.
+  await assertServiceError(
+    assignReviewReport(
+      {
+        reportId: report._id,
+        assignedTo: admin._id,
+        actorRole: "staff"
+      },
+      options
+    ),
+    REPORTING_ERROR_CODES.FORBIDDEN,
+    403
+  );
+
+  // Every rejected operation above must leave report state untouched.
+  const untouched = harness.state.reports[0];
+  assert.equal(untouched.assignedTo, null);
+  assert.equal(untouched.priority, "normal");
+
+  // Authorization is evaluated before report existence: a staff actor is
+  // rejected without a lookup, so this must be 403 REPORTING_FORBIDDEN and
+  // not 404 REPORTING_NOT_FOUND for a valid but nonexistent report id.
+  const unauthorizedAssign = await captureServiceError(
+    assignReviewReport(
+      {
+        reportId: createObjectId(),
+        assignedTo: admin._id,
+        actorRole: "staff"
+      },
+      options
+    )
+  );
+  assert.equal(
+    unauthorizedAssign.code,
+    REPORTING_ERROR_CODES.FORBIDDEN
+  );
+  assert.equal(unauthorizedAssign.status, 403);
+  assert.notEqual(
+    unauthorizedAssign.code,
+    REPORTING_ERROR_CODES.NOT_FOUND
+  );
+
+  const claimed = await claimReviewReport(
+    {
+      reportId: report._id,
+      actorId: staff._id,
+      actorRole: "staff"
+    },
+    options
+  );
+  assert.equal(claimed.assignedTo.id, staff._id.toString());
+
+  const prioritized = await updateReviewReportPriority(
+    {
+      reportId: report._id,
+      priority: "high",
+      actorRole: "admin"
+    },
+    options
+  );
+  assert.equal(prioritized.priority, "high");
+
+  const assigned = await assignReviewReport(
+    {
+      reportId: report._id,
+      assignedTo: admin._id,
+      actorRole: "admin"
+    },
+    options
+  );
+  assert.equal(assigned.assignedTo.id, admin._id.toString());
+
+  // No denied attempt persisted a review message.
+  const messages = await getReviewReportMessages(report._id, options);
+  assert.equal(messages.length, 0);
 });
 
 test("Start Review performs only submitted to under_review", async () => {

@@ -660,7 +660,8 @@ test("controllers pass authenticated identity and never body identity fields to 
   });
   assert.deepEqual(calls[2].args[0], {
     reportId,
-    actorId: staffId
+    actorId: staffId,
+    actorRole: "staff"
   });
 
   await request(`/api/reports/review/${reportId}/complete`, {
@@ -677,6 +678,28 @@ test("controllers pass authenticated identity and never body identity fields to 
     actorRole: "staff",
     assessment: "phishing",
     reviewerNote: "Final"
+  });
+
+  await request(`/api/reports/review/${reportId}/assignment`, {
+    method: "PATCH",
+    headers: authHeaders("admin", adminId),
+    body: { assignedTo: assigneeId }
+  });
+  assert.deepEqual(calls[4].args[0], {
+    reportId,
+    assignedTo: assigneeId,
+    actorRole: "admin"
+  });
+
+  await request(`/api/reports/review/${reportId}/priority`, {
+    method: "PATCH",
+    headers: authHeaders("staff", staffId),
+    body: { priority: "high" }
+  });
+  assert.deepEqual(calls[5].args[0], {
+    reportId,
+    priority: "high",
+    actorRole: "staff"
   });
 });
 
