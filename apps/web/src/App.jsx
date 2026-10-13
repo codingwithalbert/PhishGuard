@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 
 import AppShell from "./components/AppShell";
+import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SessionExpiryHandler from "./components/SessionExpiryHandler";
 import Login from "./pages/Login";
@@ -27,141 +28,147 @@ import Profile from "./pages/Profile";
 
 function App() {
   return (
-    <BrowserRouter>
-      <SessionExpiryHandler />
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+    // App-level error boundary (Phase 0A). It sits outside the router so a
+    // rendering failure anywhere in the tree degrades to a readable recovery
+    // screen instead of a blank page. Routing, authentication, and session
+    // expiry handling are unchanged; the boundary only wraps them.
+    <ErrorBoundary>
+      <BrowserRouter>
+        <SessionExpiryHandler />
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* Password Reset V1: unauthenticated routes */}
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route
-          path="/reset-password/:token"
-          element={<ResetPassword />}
-        />
-
-        {/* Authenticated application shell (Major UI/UX V1).
-            ProtectedRoute behavior is unchanged; the shell only provides
-            the shared sidebar, top header, and mobile navigation chrome. */}
-        <Route element={<AppShell />}>
+          {/* Password Reset V1: unauthenticated routes */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
+            path="/reset-password/:token"
+            element={<ResetPassword />}
           />
 
-          <Route
-            path="/progress"
-            element={
-              <ProtectedRoute>
-                <Progress />
-              </ProtectedRoute>
-            }
-          />
+          {/* Authenticated application shell (Major UI/UX V1).
+              ProtectedRoute behavior is unchanged; the shell only provides
+              the shared sidebar, top header, and mobile navigation chrome. */}
+          <Route element={<AppShell />}>
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/awareness"
-            element={
-              <ProtectedRoute>
-                <AwarenessAssessment />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/progress"
+              element={
+                <ProtectedRoute>
+                  <Progress />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/phishing-identification"
-            element={
-              <ProtectedRoute>
-                <PhishingIdentificationAssessment />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/awareness"
+              element={
+                <ProtectedRoute>
+                  <AwarenessAssessment />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/training"
-            element={
-              <ProtectedRoute>
-                <Training />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/phishing-identification"
+              element={
+                <ProtectedRoute>
+                  <PhishingIdentificationAssessment />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/reports"
-            element={
-              <ProtectedRoute>
-                <Reports />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/training"
+              element={
+                <ProtectedRoute>
+                  <Training />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/reports/new/:analysisId"
-            element={
-              <ProtectedRoute>
-                <ReportCreate />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/reports/:reportId"
-            element={
-              <ProtectedRoute>
-                <ReportDetail />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/reports/new/:analysisId"
+              element={
+                <ProtectedRoute>
+                  <ReportCreate />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/review"
-            element={
-              <ProtectedRoute allowedRoles={["staff", "admin"]}>
-                <ReviewQueue />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/reports/:reportId"
+              element={
+                <ProtectedRoute>
+                  <ReportDetail />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/review/:reportId"
-            element={
-              <ProtectedRoute allowedRoles={["staff", "admin"]}>
-                <ReviewReportDetail />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/review"
+              element={
+                <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                  <ReviewQueue />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Profile & Change Password V1: available to every authenticated
-              role. The backend resolves the account from the token. */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/review/:reportId"
+              element={
+                <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                  <ReviewReportDetail />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Research Analytics V1: admin only. Backend authorization is the
-              security boundary; this gate is a usability control. */}
-          <Route
-            path="/research"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <ResearchAnalytics />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
+            {/* Profile & Change Password V1: available to every authenticated
+                role. The backend resolves the account from the token. */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+            {/* Research Analytics V1: admin only. Backend authorization is the
+                security boundary; this gate is a usability control. */}
+            <Route
+              path="/research"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ResearchAnalytics />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

@@ -42,6 +42,21 @@ function getResultFindingsMessage(analysis) {
   return "No valid structured findings are available for this result.";
 }
 
+// Mirrors getResultFindingsMessage: absent indicator data must not be
+// reported as an analyzed result with nothing detected. The "not detected"
+// wording is reserved for a valid, genuinely empty indicators array.
+function getResultIndicatorsMessage(analysis) {
+  if (!Array.isArray(analysis?.indicators)) {
+    return "Suspicious indicators are not available for this result.";
+  }
+
+  if (analysis.indicators.length === 0) {
+    return "No suspicious indicators were detected.";
+  }
+
+  return null;
+}
+
 function getHistoryFindingsMessage(analysis) {
   if (!Array.isArray(analysis?.findings)) {
     return "Structured findings are not available for this legacy analysis.";
@@ -565,14 +580,18 @@ function Dashboard() {
           <div className="analysis-indicators">
             <h3>Detected indicators</h3>
 
-            {result.indicators.length > 0 ? (
+            {/* The result comes straight from the API and is not
+                shape-validated, so a missing or non-array field must render
+                the unavailable message instead of throwing or claiming that
+                nothing suspicious was detected. */}
+            {Array.isArray(result.indicators) && result.indicators.length > 0 ? (
               <ul>
                 {result.indicators.map((indicator) => (
                   <li key={indicator}>{indicator}</li>
                 ))}
               </ul>
             ) : (
-              <p>No suspicious indicators were detected.</p>
+              <p>{getResultIndicatorsMessage(result)}</p>
             )}
           </div>
 
