@@ -73,6 +73,10 @@ const NAV_GROUPS = [
       {
         to: "/research",
         label: "Research",
+        // Phase 1A-2-1: the navigation label stays short while the
+        // top-header title is descriptive. Declared here rather than in a
+        // separate table so the two cannot drift.
+        pageTitle: "Research Analytics",
         roles: ["admin"]
       }
     ]
@@ -89,6 +93,70 @@ function matchesPath(item, pathname) {
   }
 
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
+
+/*
+ * Phase 1A-2-1: top-header titles for routes that have no navigation item of
+ * their own.
+ *
+ * Ordinary pages are not listed here. Their titles resolve from the
+ * navigation label, or from an explicit `pageTitle` when the header is meant
+ * to read differently, so the two surfaces share one source of truth.
+ *
+ * Order matters: the first matching entry wins, so the more specific
+ * /reports/new/:analysisId is listed before the generic /reports/:reportId.
+ */
+const DETAIL_ROUTE_TITLES = [
+  { path: "/reports/new", segments: 3, title: "Report to school IT" },
+  { path: "/reports", segments: 2, title: "Report detail" },
+  { path: "/review", segments: 2, title: "IT Review detail" }
+];
+
+const DEFAULT_PAGE_TITLE = "PhishGuard";
+
+/*
+ * Resolves the top-header title for a pathname.
+ *
+ * Segment-count matching is used deliberately so that unrelated paths with a
+ * shared prefix are never confused with a route: "/reports-new" is not a
+ * "/reports" sub-route, and "/reviewer" is not a "/review" sub-route.
+ *
+ * Role visibility is intentionally not applied here. Route access is already
+ * enforced by ProtectedRoute, so this resolver only reports what a page calls
+ * itself.
+ */
+function getPageTitle(pathname) {
+  if (typeof pathname !== "string" || pathname === "") {
+    return DEFAULT_PAGE_TITLE;
+  }
+
+  const normalized = pathname.split("?")[0].split("#")[0].replace(/\/+$/, "");
+  const segmentCount = normalized.split("/").filter(Boolean).length;
+
+  for (const route of DETAIL_ROUTE_TITLES) {
+    if (
+      segmentCount === route.segments &&
+      (normalized === route.path || normalized.startsWith(`${route.path}/`))
+    ) {
+      return route.title;
+    }
+  }
+
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      // A subsection is a location within a page, not a page title. The
+      // Dashboard owns the header while Scanner or History is selected.
+      if (item.hash) {
+        continue;
+      }
+
+      if (matchesPath(item, normalized)) {
+        return item.pageTitle || item.label;
+      }
+    }
+  }
+
+  return DEFAULT_PAGE_TITLE;
 }
 
 /*
@@ -177,6 +245,7 @@ function getAriaCurrent(item, pathname, hash) {
 export {
   getAriaCurrent,
   getNavClassName,
+  getPageTitle,
   getVisibleGroups,
   isItemActive,
   isSectionActive

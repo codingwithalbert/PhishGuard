@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { getPageTitle } from "./navGroups";
 import BrandMark from "./BrandMark";
 
 /*
@@ -7,55 +8,12 @@ import BrandMark from "./BrandMark";
  * Contextual orientation only: current page identity, compact role
  * context, and the mobile navigation trigger. It intentionally does not
  * duplicate the primary navigation that lives in the sidebar/drawer.
+ *
+ * Phase 1A-2-1: the route-to-title mapping moved to navGroups so the header
+ * and the navigation cannot disagree about what a page is called. Ordinary
+ * pages resolve from their navigation label; only routes that intentionally
+ * read differently carry their own title.
  */
-function getPageTitle(pathname) {
-  if (pathname === "/dashboard") {
-    return "Dashboard";
-  }
-
-  if (pathname === "/awareness") {
-    return "Awareness Assessment";
-  }
-
-  if (pathname === "/phishing-identification") {
-    return "Phishing Identification";
-  }
-
-  if (pathname === "/training") {
-    return "Training";
-  }
-
-  if (pathname === "/progress") {
-    return "Progress";
-  }
-
-  if (pathname === "/reports") {
-    return "Reports";
-  }
-
-  if (pathname.startsWith("/reports/new")) {
-    return "Report to school IT";
-  }
-
-  if (pathname.startsWith("/reports")) {
-    return "Report detail";
-  }
-
-  if (pathname.startsWith("/review")) {
-    return "IT Review";
-  }
-
-  if (pathname === "/research") {
-    return "Research Analytics";
-  }
-
-  if (pathname === "/profile") {
-    return "Profile";
-  }
-
-  return "PhishGuard";
-}
-
 function TopHeader({ menuButtonRef, menuOpen, onMenuToggle, role }) {
   const location = useLocation();
 
