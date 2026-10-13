@@ -741,6 +741,7 @@ function ReviewReportDetailPage() {
           <section className="report-detail-header review-detail-header">
             <Link to="/review">Back to Review Queue</Link>
 
+            <span className="report-section-context">IT Review</span>
             <span className="report-ticket-label">Ticket number</span>
             <h1 className="report-ticket-number">
               {report.ticketNumber}

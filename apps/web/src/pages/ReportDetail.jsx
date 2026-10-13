@@ -293,6 +293,7 @@ function ReportDetailPage() {
 
             <div className="report-ticket-heading">
               <div>
+                <span className="report-section-context">Reports</span>
                 <span className="report-ticket-label">Ticket number</span>
                 <h1 className="report-ticket-number">
                   {report.ticketNumber}

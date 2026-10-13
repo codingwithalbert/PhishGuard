@@ -2626,6 +2626,19 @@ main.auth-main > form button {
   margin-bottom: 0.75rem;
 }
 
+/* Section context for a detail view: names the navigation section a report
+   belongs to. Deliberately subordinate to the ticket-number heading and
+   rendered as a span so it adds no document outline level. */
+.report-section-context {
+  display: block;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .report-ticket-label {
   display: block;
   color: var(--muted);
