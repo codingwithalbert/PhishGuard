@@ -2246,6 +2246,26 @@ The system therefore keeps three concepts separate:
 
 These concepts must remain separate in the database, API, and frontend.
 
+### 7.27 Reporting Rate Limits
+
+Exactly three authenticated Reporting write endpoints are rate limited to bound storage growth, database-write amplification, and notification flooding. All other Reporting write endpoints, including report completion, are unlimited in this phase.
+
+Quotas are endpoint-specific:
+
+- `POST /api/reports` — 10 requests per 60 minutes, enforced by `reportCreateLimiter`;
+- `POST /api/reports/:reportId/messages` — 20 requests per 10 minutes, enforced by `studentMessageLimiter`; and
+- `POST /api/reports/review/:reportId/messages` — 20 requests per 10 minutes, enforced by the existing `reviewerMessageLimiter`.
+
+Requirements:
+
+- Every authenticated limiter must be keyed exclusively by the server-authenticated `req.user.userId` through `authenticatedUserKey`. No network header, including `X-Forwarded-For`, may participate in the key.
+- Each limiter must be a separate `rateLimit` instance with an independent counter. Student message quota must never be consumed or reset by reviewer message traffic, and report creation must never consume message quota.
+- Route order must be `authenticate`, `requireAuthenticatedIdentity`, the limiter, validation, then the controller. The staff review-message route additionally runs `authorizeRoles("staff", "admin")` between `authenticate` and `requireAuthenticatedIdentity`. A request blocked by the limiter must not reach validation or the controller and must perform no database write.
+- Exceeding a quota must return `429` with `{ success: false, error: "Too many requests. Please try again later." }`, a `Retry-After` header, and `RateLimit`/`RateLimit-Policy` draft-8 headers. Legacy `X-RateLimit-*` headers must not be emitted.
+- Counters are in-memory and per process. Quotas reset on server restart or instance replacement and are not aggregated across instances. This limitation is accepted for V1.
+- Because the limiter runs ahead of validation, a validation-rejected request still consumes one unit of quota while performing no database write.
+- Rate limiting must not alter authentication, authorization, ownership, or workflow rules. Report completion and the remaining IT review actions stay unlimited in this phase.
+
 ---
 
 ## 8. Frontend Behavior and UI Requirements

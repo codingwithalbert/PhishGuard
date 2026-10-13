@@ -117,6 +117,37 @@ const reviewerMessageLimiter = rateLimit({
   message: AUTHENTICATED_LIMIT_MESSAGE
 });
 
+// Report creation limiter. Each accepted submission writes a Report document
+// and a concurrency-safe ticket-counter allocation, and the only structural
+// bound is one Report per owned Analysis, so an authenticated account could
+// otherwise generate unbounded storage and database writes. Ten per hour is
+// well above realistic student reporting while fixing a per-account ceiling on
+// report writes. Its own instance keeps report creation from consuming or
+// resetting any message quota.
+const reportCreateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: authenticatedUserKey,
+  message: AUTHENTICATED_LIMIT_MESSAGE
+});
+
+// Student report message limiter. Each accepted message writes a ReportMessage
+// document for a report the sender owns; unlike the reviewer path it sends no
+// outbound email. The window and limit deliberately mirror
+// `reviewerMessageLimiter` so both sides of the same conversation carry an
+// equally generous, already-justified budget, while a separate instance keeps
+// student and reviewer counters fully independent.
+const studentMessageLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: authenticatedUserKey,
+  message: AUTHENTICATED_LIMIT_MESSAGE
+});
+
 module.exports = {
   AUTHENTICATED_LIMIT_MESSAGE,
   authenticatedUserKey,
@@ -124,6 +155,8 @@ module.exports = {
   forgotPasswordLimiter,
   loginLimiter,
   registerLimiter,
+  reportCreateLimiter,
   requireAuthenticatedIdentity,
-  reviewerMessageLimiter
+  reviewerMessageLimiter,
+  studentMessageLimiter
 };

@@ -15,7 +15,8 @@ const {
 } = require("../src/middleware/account.validate.middleware");
 const {
   validateReportId,
-  validateReportMessage
+  validateReportMessage,
+  validateReportSubmission
 } = require("../src/middleware/reporting.validate.middleware");
 const {
   AUTHENTICATED_LIMIT_MESSAGE,
@@ -24,13 +25,16 @@ const {
   forgotPasswordLimiter,
   loginLimiter,
   registerLimiter,
+  reportCreateLimiter,
   requireAuthenticatedIdentity,
-  reviewerMessageLimiter
+  reviewerMessageLimiter,
+  studentMessageLimiter
 } = require("../src/middleware/rateLimit.middleware");
 const authRoutes = require("../src/routes/auth.routes");
 const reportingRoutes = require("../src/routes/reporting.routes");
 
-// Authenticated-user rate limiting for the two Phase 1 endpoints.
+// Authenticated-user rate limiting for the four endpoints that mount an
+// authenticated limiter.
 //
 // The real `authenticate`, identity guard, limiters, and validators are used.
 // Only the terminal boundary is replaced, so no bcrypt hashing and no
@@ -57,10 +61,14 @@ const AUTH_REQUIRED_BODY = {
 
 const CREDENTIAL_LIMIT = 5;
 const REVIEWER_MESSAGE_LIMIT = 20;
+const REPORT_CREATE_LIMIT = 10;
+const STUDENT_MESSAGE_LIMIT = 20;
 
 const USER_A = new mongoose.Types.ObjectId().toString();
 const USER_B = new mongoose.Types.ObjectId().toString();
 const REVIEW_REPORT_ID = new mongoose.Types.ObjectId().toString();
+const STUDENT_REPORT_ID = new mongoose.Types.ObjectId().toString();
+const ANALYSIS_ID = new mongoose.Types.ObjectId().toString();
 
 const FORWARDING_HEADERS = {
   "X-Forwarded-For": "203.0.113.99, 198.51.100.4, 192.0.2.5",
@@ -73,6 +81,11 @@ const CHANGE_PASSWORD_BODY = {
   newPassword: "new-Password-2"
 };
 const REVIEW_MESSAGE_BODY = { message: "Please verify this submission." };
+const REPORT_SUBMISSION_BODY = {
+  analysisId: ANALYSIS_ID,
+  reason: "suspected_phishing"
+};
+const STUDENT_MESSAGE_BODY = { message: "This link asked for my password." };
 
 test.after(() => {
   if (previousJwtSecret === undefined) {
@@ -109,7 +122,9 @@ function resetKeys(...ids) {
   return Promise.all(
     ids.flatMap((id) => [
       credentialChangeLimiter.resetKey(`u:${id}`),
-      reviewerMessageLimiter.resetKey(`u:${id}`)
+      reviewerMessageLimiter.resetKey(`u:${id}`),
+      reportCreateLimiter.resetKey(`u:${id}`),
+      studentMessageLimiter.resetKey(`u:${id}`)
     ])
   );
 }
@@ -153,6 +168,49 @@ function buildReviewMessageApp(state) {
     authorizeRoles("staff", "admin"),
     requireAuthenticatedIdentity,
     reviewerMessageLimiter,
+    validateReportId,
+    validateReportMessage,
+    (req, res) => {
+      state.downstream += 1;
+      return res.status(201).json({ success: true, reportMessage: {} });
+    }
+  );
+  app.use(errorHandler);
+  return app;
+}
+
+// Mirrors the production chain for report creation: router-wide
+// authentication, then the identity guard, then the dedicated report-create
+// limiter, then submission validation.
+function buildReportCreateApp(state) {
+  const app = express();
+  app.use(express.json({ limit: "1mb" }));
+  app.post(
+    "/api/reports",
+    authenticate,
+    requireAuthenticatedIdentity,
+    reportCreateLimiter,
+    validateReportSubmission,
+    (req, res) => {
+      state.downstream += 1;
+      return res.status(201).json({ success: true, report: {} });
+    }
+  );
+  app.use(errorHandler);
+  return app;
+}
+
+// Mirrors the production chain for a student's own report message: no role
+// gate (ownership is a service concern), then guard, dedicated student
+// limiter, then validation.
+function buildStudentMessageApp(state) {
+  const app = express();
+  app.use(express.json({ limit: "1mb" }));
+  app.post(
+    "/api/reports/:reportId/messages",
+    authenticate,
+    requireAuthenticatedIdentity,
+    studentMessageLimiter,
     validateReportId,
     validateReportMessage,
     (req, res) => {
@@ -212,6 +270,30 @@ function reviewRequest(userId, extraHeaders = {}) {
   };
 }
 
+function reportCreateRequest(userId, extraHeaders = {}) {
+  return {
+    path: "/api/reports",
+    method: "POST",
+    headers: {
+      ...(userId ? { Authorization: `Bearer ${tokenFor(userId)}` } : {}),
+      ...extraHeaders
+    },
+    body: REPORT_SUBMISSION_BODY
+  };
+}
+
+function studentMessageRequest(userId, extraHeaders = {}) {
+  return {
+    path: `/api/reports/${STUDENT_REPORT_ID}/messages`,
+    method: "POST",
+    headers: {
+      ...(userId ? { Authorization: `Bearer ${tokenFor(userId)}` } : {}),
+      ...extraHeaders
+    },
+    body: STUDENT_MESSAGE_BODY
+  };
+}
+
 function assertRateLimitHeaders(response) {
   assert.ok(response.headers.get("ratelimit"), "RateLimit header must be present");
   assert.ok(
@@ -249,6 +331,8 @@ function handlerIndexes(layer) {
     guard: handlers.indexOf(requireAuthenticatedIdentity),
     credential: handlers.indexOf(credentialChangeLimiter),
     reviewer: handlers.indexOf(reviewerMessageLimiter),
+    create: handlers.indexOf(reportCreateLimiter),
+    student: handlers.indexOf(studentMessageLimiter),
     handlers,
     indexOfNamed
   };
@@ -273,6 +357,28 @@ test("the existing unauthenticated limiters are unchanged and distinct", () => {
   }
 
   assert.notEqual(reviewerMessageLimiter, credentialChangeLimiter);
+});
+
+test("the Reporting limiters are separate instances so no counter is shared", () => {
+  assert.equal(typeof reportCreateLimiter, "function");
+  assert.equal(typeof studentMessageLimiter, "function");
+
+  const established = [
+    loginLimiter,
+    registerLimiter,
+    forgotPasswordLimiter,
+    credentialChangeLimiter,
+    reviewerMessageLimiter
+  ];
+
+  for (const existing of established) {
+    assert.notEqual(reportCreateLimiter, existing);
+    assert.notEqual(studentMessageLimiter, existing);
+  }
+
+  // Student traffic must never consume or reset reviewer quota.
+  assert.notEqual(studentMessageLimiter, reviewerMessageLimiter);
+  assert.notEqual(reportCreateLimiter, studentMessageLimiter);
 });
 
 test("the limiter key is derived only from the server-authoritative user id", () => {
@@ -356,6 +462,10 @@ test("C. the password-change limiter allows five requests then blocks the sixth"
   assert.equal(blocked.status, 429);
   assert.deepEqual(await blocked.json(), AUTHENTICATED_LIMIT_MESSAGE);
   assertRateLimitHeaders(blocked);
+  assert.ok(
+    blocked.headers.get("retry-after"),
+    "Retry-After must be present on a 429"
+  );
   assert.equal(state.downstream, CREDENTIAL_LIMIT, "blocked request must not reach the handler");
 
   // 12. A different user keeps an independent quota.
@@ -388,6 +498,10 @@ test("D. the reviewer-message limiter allows twenty requests then blocks the twe
 
   assert.equal(blocked.status, 429);
   assert.deepEqual(await blocked.json(), AUTHENTICATED_LIMIT_MESSAGE);
+  assert.ok(
+    blocked.headers.get("retry-after"),
+    "Retry-After must be present on a 429"
+  );
   assert.equal(state.downstream, REVIEWER_MESSAGE_LIMIT);
 
   // 16. A second reviewer has an independent quota.
@@ -396,6 +510,255 @@ test("D. the reviewer-message limiter allows twenty requests then blocks the twe
 
   assert.equal(otherReviewer.status, 201);
   await otherReviewer.json();
+});
+
+test("E. the report-create limiter allows ten requests then blocks the eleventh", async (t) => {
+  await resetKeys(USER_A, USER_B);
+  stubActiveUsers(t);
+  const state = { downstream: 0 };
+  const app = buildReportCreateApp(state);
+
+  for (let attempt = 1; attempt <= REPORT_CREATE_LIMIT; attempt += 1) {
+    const request = reportCreateRequest(USER_A);
+    const response = await serve(app, request.path, request);
+
+    assert.equal(response.status, 201, `request ${attempt} must pass the limiter`);
+    assertRateLimitHeaders(response);
+    await response.json();
+  }
+
+  assert.equal(state.downstream, REPORT_CREATE_LIMIT);
+
+  const blockedRequest = reportCreateRequest(USER_A);
+  const blocked = await serve(app, blockedRequest.path, blockedRequest);
+
+  assert.equal(blocked.status, 429);
+  assert.deepEqual(await blocked.json(), AUTHENTICATED_LIMIT_MESSAGE);
+  assertRateLimitHeaders(blocked);
+  assert.ok(
+    blocked.headers.get("retry-after"),
+    "Retry-After must be present on a 429"
+  );
+  assert.equal(
+    state.downstream,
+    REPORT_CREATE_LIMIT,
+    "blocked request must not reach the handler"
+  );
+
+  // A different user keeps an independent quota.
+  const otherRequest = reportCreateRequest(USER_B);
+  const otherUser = await serve(app, otherRequest.path, otherRequest);
+
+  assert.equal(otherUser.status, 201);
+  await otherUser.json();
+
+  // Forwarding headers must not create a fresh bucket for the blocked user.
+  const spoofedRequest = reportCreateRequest(USER_A, FORWARDING_HEADERS);
+  const spoofed = await serve(app, spoofedRequest.path, spoofedRequest);
+
+  assert.equal(spoofed.status, 429, "forwarding headers must not bypass the limit");
+  assert.deepEqual(await spoofed.json(), AUTHENTICATED_LIMIT_MESSAGE);
+  assert.ok(
+    spoofed.headers.get("retry-after"),
+    "Retry-After must be present on a 429"
+  );
+});
+
+test("F. the student-message limiter allows twenty requests then blocks the twenty-first", async (t) => {
+  await resetKeys(USER_A, USER_B);
+  stubActiveUsers(t);
+  const state = { downstream: 0 };
+  const app = buildStudentMessageApp(state);
+
+  for (let attempt = 1; attempt <= STUDENT_MESSAGE_LIMIT; attempt += 1) {
+    const request = studentMessageRequest(USER_A);
+    const response = await serve(app, request.path, request);
+
+    assert.equal(response.status, 201, `request ${attempt} must pass the limiter`);
+    assertRateLimitHeaders(response);
+    await response.json();
+  }
+
+  assert.equal(state.downstream, STUDENT_MESSAGE_LIMIT);
+
+  const blockedRequest = studentMessageRequest(USER_A);
+  const blocked = await serve(app, blockedRequest.path, blockedRequest);
+
+  assert.equal(blocked.status, 429);
+  assert.deepEqual(await blocked.json(), AUTHENTICATED_LIMIT_MESSAGE);
+  assertRateLimitHeaders(blocked);
+  assert.ok(
+    blocked.headers.get("retry-after"),
+    "Retry-After must be present on a 429"
+  );
+  assert.equal(
+    state.downstream,
+    STUDENT_MESSAGE_LIMIT,
+    "blocked request must not reach the handler"
+  );
+
+  // A different user keeps an independent quota.
+  const otherRequest = studentMessageRequest(USER_B);
+  const otherUser = await serve(app, otherRequest.path, otherRequest);
+
+  assert.equal(otherUser.status, 201);
+  await otherUser.json();
+
+  // Forwarding headers must not create a fresh bucket for the blocked user.
+  const spoofedRequest = studentMessageRequest(USER_A, FORWARDING_HEADERS);
+  const spoofed = await serve(app, spoofedRequest.path, spoofedRequest);
+
+  assert.equal(spoofed.status, 429, "forwarding headers must not bypass the limit");
+  assert.deepEqual(await spoofed.json(), AUTHENTICATED_LIMIT_MESSAGE);
+  assert.ok(
+    spoofed.headers.get("retry-after"),
+    "Retry-After must be present on a 429"
+  );
+});
+
+test("G. unauthenticated requests to the new write routes fail closed without consuming quota", async (t) => {
+  await resetKeys(USER_A, USER_B);
+  stubActiveUsers(t);
+
+  const createState = { downstream: 0 };
+  const createApp = buildReportCreateApp(createState);
+
+  const createRequest = reportCreateRequest(null);
+  const createDenied = await serve(createApp, createRequest.path, createRequest);
+
+  assert.equal(createDenied.status, 401);
+  assert.deepEqual(await createDenied.json(), AUTH_REQUIRED_BODY);
+  assert.equal(createState.downstream, 0);
+  // The refusal happens before the limiter, so no rate-limit state or header
+  // is written and no bucket can be touched.
+  assert.equal(createDenied.headers.get("ratelimit"), null);
+
+  const studentState = { downstream: 0 };
+  const studentApp = buildStudentMessageApp(studentState);
+
+  const studentRequest = studentMessageRequest(null);
+  const studentDenied = await serve(studentApp, studentRequest.path, studentRequest);
+
+  assert.equal(studentDenied.status, 401);
+  assert.deepEqual(await studentDenied.json(), AUTH_REQUIRED_BODY);
+  assert.equal(studentState.downstream, 0);
+  assert.equal(studentDenied.headers.get("ratelimit"), null);
+
+  // The refused attempts consumed nothing, so the full quota is still
+  // available to an authenticated identity.
+  const allowedCreate = reportCreateRequest(USER_A);
+  const allowed = await serve(createApp, allowedCreate.path, allowedCreate);
+
+  assert.equal(allowed.status, 201);
+  await allowed.json();
+  assert.equal(createState.downstream, 1);
+});
+
+test("H. a validation rejection still consumes one unit of the student quota", async (t) => {
+  await resetKeys(USER_A, USER_B);
+  stubActiveUsers(t);
+  const state = { downstream: 0 };
+  const app = buildStudentMessageApp(state);
+
+  // The limiter runs ahead of validation, so a rejected request spends quota
+  // while still performing no database write.
+  const invalidRequest = studentMessageRequest(USER_A);
+  invalidRequest.body = { message: "" };
+  const invalid = await serve(app, invalidRequest.path, invalidRequest);
+
+  assert.equal(invalid.status, 400);
+  await invalid.json();
+  assert.equal(state.downstream, 0, "validation must reject before the handler");
+
+  for (let attempt = 1; attempt < STUDENT_MESSAGE_LIMIT; attempt += 1) {
+    const request = studentMessageRequest(USER_A);
+    const response = await serve(app, request.path, request);
+
+    assert.equal(response.status, 201);
+    await response.json();
+  }
+
+  assert.equal(state.downstream, STUDENT_MESSAGE_LIMIT - 1);
+
+  const blockedRequest = studentMessageRequest(USER_A);
+  const blocked = await serve(app, blockedRequest.path, blockedRequest);
+
+  assert.equal(
+    blocked.status,
+    429,
+    "the rejected request must have consumed its unit of quota"
+  );
+  assert.equal(state.downstream, STUDENT_MESSAGE_LIMIT - 1);
+});
+
+test("I. student and reviewer message quotas are independent for the same user", async (t) => {
+  await resetKeys(USER_A, USER_B);
+  // The student message route carries no role gate, so a single identity can
+  // exercise both budgets and prove the two counters are not shared.
+  stubActiveUsers(t, (id) => (id === USER_A ? "staff" : "user"));
+
+  const studentState = { downstream: 0 };
+  const studentApp = buildStudentMessageApp(studentState);
+
+  for (let attempt = 1; attempt <= STUDENT_MESSAGE_LIMIT; attempt += 1) {
+    const request = studentMessageRequest(USER_A);
+    const response = await serve(studentApp, request.path, request);
+
+    assert.equal(response.status, 201);
+    await response.json();
+  }
+
+  const blockedStudentRequest = studentMessageRequest(USER_A);
+  const blockedStudent = await serve(
+    studentApp,
+    blockedStudentRequest.path,
+    blockedStudentRequest
+  );
+
+  assert.equal(blockedStudent.status, 429);
+  assert.equal(studentState.downstream, STUDENT_MESSAGE_LIMIT);
+
+  // Exhausting the student budget must leave the reviewer budget untouched.
+  const reviewerState = { downstream: 0 };
+  const reviewerApp = buildReviewMessageApp(reviewerState);
+  const firstReviewRequest = reviewRequest(USER_A);
+  const firstReview = await serve(
+    reviewerApp,
+    firstReviewRequest.path,
+    firstReviewRequest
+  );
+
+  assert.equal(firstReview.status, 201, "reviewer quota must be independent");
+  await firstReview.json();
+
+  for (let attempt = 2; attempt <= REVIEWER_MESSAGE_LIMIT; attempt += 1) {
+    const request = reviewRequest(USER_A);
+    const response = await serve(reviewerApp, request.path, request);
+
+    assert.equal(response.status, 201);
+    await response.json();
+  }
+
+  const blockedReviewRequest = reviewRequest(USER_A);
+  const blockedReview = await serve(
+    reviewerApp,
+    blockedReviewRequest.path,
+    blockedReviewRequest
+  );
+
+  assert.equal(blockedReview.status, 429);
+  assert.equal(reviewerState.downstream, REVIEWER_MESSAGE_LIMIT);
+
+  // Reviewer traffic never moved or reset the student bucket.
+  const studentAgainRequest = studentMessageRequest(USER_A);
+  const studentAgain = await serve(
+    studentApp,
+    studentAgainRequest.path,
+    studentAgainRequest
+  );
+
+  assert.equal(studentAgain.status, 429);
+  assert.equal(studentState.downstream, STUDENT_MESSAGE_LIMIT);
 });
 
 test("A. spoofed forwarding headers cannot create or move an authenticated bucket", async (t) => {
@@ -606,8 +969,53 @@ test("production routes mount authentication, authorization, guard, then limiter
   );
 });
 
-test("the new limiters mount only on the two intended endpoints", () => {
+test("production routes mount the guard, then the limiter, then validation on student writes", () => {
+  assert.ok(
+    routerHasAuthenticate(reportingRoutes),
+    "the reporting router must still apply authenticate router-wide"
+  );
+
+  for (const [path, limiterKey, validatorName, controllerName] of [
+    ["/", "create", "validateReportSubmission", "createReport"],
+    [
+      "/:reportId/messages",
+      "student",
+      "validateReportId",
+      "createOwnReportMessage"
+    ]
+  ]) {
+    const route = handlerIndexes(findRouteLayer(reportingRoutes, path, "post"));
+
+    assert.ok(route.guard >= 0, `${path} must mount the identity guard`);
+    assert.ok(
+      route[limiterKey] > route.guard,
+      `${path} must mount its limiter after the guard`
+    );
+
+    const validatorIndex = route.indexOfNamed(validatorName);
+    const controllerIndex = route.indexOfNamed(controllerName);
+
+    assert.ok(validatorIndex >= 0, `${path} must keep ${validatorName}`);
+    assert.ok(controllerIndex >= 0, `${path} must keep ${controllerName}`);
+    assert.ok(
+      route[limiterKey] < validatorIndex,
+      `${path} must limit before validation`
+    );
+    assert.ok(
+      route[limiterKey] < controllerIndex,
+      `${path} must limit before the controller`
+    );
+  }
+});
+
+test("the authenticated limiters mount only on the four intended endpoints", () => {
   const mounted = [];
+  const authenticatedLimiters = [
+    credentialChangeLimiter,
+    reviewerMessageLimiter,
+    reportCreateLimiter,
+    studentMessageLimiter
+  ];
 
   for (const [routerName, router] of [
     ["auth", authRoutes],
@@ -623,11 +1031,7 @@ test("the new limiters mount only on the two intended endpoints", () => {
         .map((method) => method.toUpperCase())
         .join(",");
 
-      if (handlers.includes(credentialChangeLimiter)) {
-        mounted.push(`${routerName}${layer.route.path}[${methods}]`);
-      }
-
-      if (handlers.includes(reviewerMessageLimiter)) {
+      if (authenticatedLimiters.some((limiter) => handlers.includes(limiter))) {
         mounted.push(`${routerName}${layer.route.path}[${methods}]`);
       }
     }
@@ -635,6 +1039,8 @@ test("the new limiters mount only on the two intended endpoints", () => {
 
   assert.deepEqual(mounted.sort(), [
     "auth/change-password[POST]",
+    "reports/:reportId/messages[POST]",
+    "reports/[POST]",
     "reports/review/:reportId/messages[POST]"
   ]);
 
@@ -645,6 +1051,8 @@ test("the new limiters mount only on the two intended endpoints", () => {
 
   assert.equal(completion.reviewer, -1);
   assert.equal(completion.credential, -1);
+  assert.equal(completion.create, -1);
+  assert.equal(completion.student, -1);
 
   const completionLayer = findRouteLayer(
     reportingRoutes,
@@ -663,13 +1071,33 @@ test("the new limiters mount only on the two intended endpoints", () => {
   );
   assert.ok(routerHasAuthenticate(reportingRoutes));
 
-  // Student report messages must not inherit the reviewer limiter.
+  // Student report messages carry their own limiter and never inherit the
+  // reviewer or credential-change limiters, so the two message quotas stay
+  // independent.
   const studentMessage = handlerIndexes(
     findRouteLayer(reportingRoutes, "/:reportId/messages", "post")
   );
 
+  assert.ok(
+    studentMessage.student >= 0,
+    "the student message limiter must be mounted"
+  );
   assert.equal(studentMessage.reviewer, -1);
   assert.equal(studentMessage.credential, -1);
+  assert.equal(studentMessage.create, -1);
+
+  // Report creation carries its own limiter and nothing else.
+  const reportCreate = handlerIndexes(
+    findRouteLayer(reportingRoutes, "/", "post")
+  );
+
+  assert.ok(
+    reportCreate.create >= 0,
+    "the report-create limiter must be mounted"
+  );
+  assert.equal(reportCreate.reviewer, -1);
+  assert.equal(reportCreate.credential, -1);
+  assert.equal(reportCreate.student, -1);
 
   // The existing public limiters all remain mounted.
   assert.ok(

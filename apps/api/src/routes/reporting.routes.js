@@ -16,8 +16,10 @@ const {
   validateStartReview
 } = require("../middleware/reporting.validate.middleware");
 const {
+  reportCreateLimiter,
   requireAuthenticatedIdentity,
-  reviewerMessageLimiter
+  reviewerMessageLimiter,
+  studentMessageLimiter
 } = require("../middleware/rateLimit.middleware");
 const defaultController = require("../controllers/reporting.controller");
 
@@ -110,8 +112,14 @@ function createReportingRouter(controller = defaultController) {
     controller.completeReviewReport
   );
 
+  // Authenticated-user abuse protection: the router-wide `authenticate` above
+  // runs first, then the identity guard, then the report-create limiter, then
+  // validation. A blocked request therefore performs no validation, no
+  // controller work, and no database write.
   router.post(
     "/",
+    requireAuthenticatedIdentity,
+    reportCreateLimiter,
     validateReportSubmission,
     controller.createReport
   );
@@ -127,8 +135,14 @@ function createReportingRouter(controller = defaultController) {
     controller.getOwnReportMessages
   );
 
+  // Student message throttling. It uses its own limiter instance so student
+  // quota is never shared with, or consumed by, reviewer message traffic, and
+  // it runs ahead of validation for the same no-write guarantee as above.
+  // Ownership stays enforced in the service, as before.
   router.post(
     "/:reportId/messages",
+    requireAuthenticatedIdentity,
+    studentMessageLimiter,
     validateReportId,
     validateReportMessage,
     controller.createOwnReportMessage
