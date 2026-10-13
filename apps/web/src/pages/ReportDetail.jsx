@@ -261,15 +261,16 @@ function ReportDetailPage() {
           role="status"
           aria-live="polite"
         >
+          <h1>Report detail</h1>
           Loading Report...
         </section>
       ) : error ? (
         <section className="reports-error-state" role="alert">
-          <h2>
+          <h1>
             {error.status === 404
               ? "Report not found"
               : "Report unavailable"}
-          </h2>
+          </h1>
           <p>{error.message}</p>
 
           {isSessionError(error) ? (

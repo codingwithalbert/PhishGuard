@@ -2561,6 +2561,20 @@ main.auth-main > form button {
   margin-top: 0;
 }
 
+/* Phase 0B-1: the report-detail loading and error states now use h1 so every
+   render state exposes exactly one h1. The global h1 rule is display-scale,
+   which would enlarge those headings beyond the established section size, so
+   this restores the previous h2 appearance (1.4rem). Scoped to the two
+   report-detail page hooks so PageHeader headings, ticket-number headings,
+   and the other reporting pages are unaffected. */
+.report-detail-page .reports-state > h1,
+.report-detail-page .reports-error-state > h1,
+.review-detail-page .reports-state > h1,
+.review-detail-page .reports-error-state > h1 {
+  margin-top: 0;
+  font-size: 1.4rem;
+}
+
 .reports-empty-state p,
 .reports-error-state p {
   color: var(--muted);
