@@ -110,10 +110,10 @@
 .nav-group-label {
   margin: 0;
   padding: 0 var(--space-3) var(--space-2);
-  color: var(--color-muted);
-  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -139,20 +139,70 @@
   text-decoration: none;
 }
 
-.nav-item-active {
-  background: rgba(56, 189, 248, 0.1);
-  color: var(--color-accent);
+/* Focus is shown with an outline rather than a background so it stays
+   visible on every state below. The offset keeps the ring inside the
+   scrolling nav container instead of being clipped by its overflow. */
+.nav-item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
 }
 
-.nav-item-active::before {
+/* Phase 1A-1 navigation states.
+   Four states are styled rather than two so a Dashboard subsection reads as
+   part of the Dashboard. Every state carries a non-color cue (weight,
+   indicator shape, or indentation) as well as a color change. */
+
+/* Child destination of another page. Indentation is the structural cue and
+   applies whether or not the item is currently selected. */
+.nav-item-child {
+  padding-left: var(--space-5);
+}
+
+/* Current page: the strongest treatment. */
+.nav-item-current {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.nav-item-current::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
   border-radius: 2px;
   background: var(--color-accent);
+}
+
+/* Current page while one of its subsections is selected. Deliberately
+   lighter than .nav-item-current: the page is still identified, but the
+   filled treatment is reserved for the exact destination. */
+.nav-item-parent {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.nav-item-parent::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
+
+/* Selected subsection. Distinguished from .nav-item-current by the
+   indentation and a full-width outline rather than a left edge indicator. */
+.nav-item-subsection {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
 }
 
 .sidebar-footer {
@@ -375,7 +425,8 @@
 @media (prefers-reduced-motion: reduce) {
   .skip-link,
   .mobile-nav-scrim,
-  .mobile-nav-drawer {
+  .mobile-nav-drawer,
+  .nav-item {
     animation: none;
     transition: none;
   }

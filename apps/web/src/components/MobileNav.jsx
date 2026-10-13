@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { getVisibleGroups, isItemActive } from "./navGroups";
+import {
+  getAriaCurrent,
+  getNavClassName,
+  getVisibleGroups
+} from "./navGroups";
 import BrandMark from "./BrandMark";
 
 /*
@@ -142,27 +146,25 @@ function MobileNav({ open, onClose, onNavigate, onLogout, role }) {
             <div className="nav-group" key={group.label}>
               <p className="nav-group-label">{group.label}</p>
 
-              {group.items.map((item) => {
-                const active = isItemActive(
-                  item,
-                  location.pathname,
-                  location.hash
-                );
-
-                return (
-                  <Link
-                    key={item.label}
-                    to={item.to}
-                    className={
-                      active ? "nav-item nav-item-active" : "nav-item"
-                    }
-                    aria-current={active ? "page" : undefined}
-                    onClick={onNavigate}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {group.items.map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  className={getNavClassName(
+                    item,
+                    location.pathname,
+                    location.hash
+                  )}
+                  aria-current={getAriaCurrent(
+                    item,
+                    location.pathname,
+                    location.hash
+                  )}
+                  onClick={onNavigate}
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
           ))}
         </nav>
