@@ -32,6 +32,13 @@ const JSON_BODY_LIMIT = "1mb";
 function createApp() {
   const app = express();
 
+  // Trust exactly the one Render edge hop that terminates TLS and forwards
+  // requests to this service. Bounded to a single hop (never `true`) so
+  // `req.ip` - the key of the public authentication rate limiters - resolves
+  // to the client address that trusted hop observed, while attacker-prepended
+  // leftmost X-Forwarded-For entries are ignored and cannot bypass limits.
+  app.set("trust proxy", 1);
+
   app.use(helmet());
 
   app.use(
