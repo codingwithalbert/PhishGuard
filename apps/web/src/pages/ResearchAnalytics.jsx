@@ -555,11 +555,21 @@ function ResearchAnalyticsPage() {
 
             <p className="research-boundary-note">
               Limitations worth considering when reading these results include
-              small sample sizes, missing participant measurements,
-              self-selected participation, repeated assessment attempts, the use
-              of the latest attempt only, the limited number of Training
-              Exposure levels, and the specific PhishGuard assessment
-              instruments.
+              small sample sizes, missing participant measurements, repeated
+              assessment attempts, the use of the latest attempt only, the
+              limited number of Training Exposure levels, and the specific
+              PhishGuard assessment instruments.
+            </p>
+
+            <p className="research-boundary-note">
+              How the dataset is assembled is also a limitation. Every eligible
+              student account is included automatically. No consent or voluntary
+              participation mechanism exists yet, so no account holder has been
+              asked to take part and no account can be excluded from these
+              figures. Treat any value here as a description of the accounts that
+              exist in the system, not as the result of a recruited research
+              sample, and do not present it as a research finding until
+              participation and consent have been established and approved.
             </p>
           </section>
 
