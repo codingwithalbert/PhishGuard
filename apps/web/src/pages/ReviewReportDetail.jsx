@@ -741,15 +741,19 @@ function ReviewReportDetailPage() {
           <section className="report-detail-header review-detail-header">
             <Link to="/review">Back to Review Queue</Link>
 
-            <span className="report-section-context">IT Review</span>
-            <span className="report-ticket-label">Ticket number</span>
-            <h1 className="report-ticket-number">
-              {report.ticketNumber}
-            </h1>
+            <div className="report-ticket-heading">
+              <div>
+                <span className="report-section-context">IT Review</span>
+                <span className="report-ticket-label">Ticket number</span>
+                <h1 className="report-ticket-number">
+                  {report.ticketNumber}
+                </h1>
+              </div>
 
-            <span className={getStatusClassName(report.status)}>
-              {getReportStatusLabel(report.status)}
-            </span>
+              <span className={getStatusClassName(report.status)}>
+                {getReportStatusLabel(report.status)}
+              </span>
+            </div>
           </section>
 
           <section className="report-detail-section">

@@ -3155,6 +3155,23 @@ main.auth-main > form button {
   gap: var(--space-3);
 }
 
+/* Phase 1A-3: the IT Review detail header carries the same ticket-heading
+   structure as the student Report detail header, so the workflow status
+   badge sits beside the ticket heading on wide screens and wraps naturally
+   on narrow ones. Reuses the same values; scoped to review-detail-page so
+   the student header and the Reports/IT Review list pages are unaffected. */
+.review-detail-page .report-ticket-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.review-detail-page .report-ticket-heading > div {
+  min-width: 0;
+}
+
 .student-reporting .report-detail-header .report-ticket-number {
   margin: var(--space-1) 0 0;
 }
