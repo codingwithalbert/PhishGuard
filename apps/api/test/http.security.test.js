@@ -264,30 +264,126 @@ test("createApp returns independent app instances without shared state", () => {
   assert.equal(typeof first.listen, "function");
 });
 
-test("the bootstrap still connects to the database before listening", () => {
-  // The bootstrap is not executed here, because that would require a real
-  // database connection. Instead this guards the source ordering that matters:
-  // the database must be connected before `app.listen` is reached, and the app
-  // must come from `createApp()` so bootstrap and tests share one configuration.
+test("the bootstrap still connects to the database before listening", async () => {
+  // Previously this was asserted by matching literal source text. The bootstrap
+  // now takes its collaborators as injectable parameters so the lifecycle is
+  // testable, which changed that text. The GUARANTEE is unchanged, so it is
+  // now asserted behaviourally - which is stronger, because ordering is observed
+  // rather than inferred from a substring.
+  // 0. Test-only dotenv isolation (same mechanism as the stub at the top of
+  //    lifecycle.test.js): `src/server.js` line 1 calls
+  //    `require("dotenv").config()`, which would read the real `apps/api/.env`
+  //    into this child process. Replacing dotenv under its own require-cache
+  //    key before this require makes that call a no-op for every evaluation
+  //    of the module below, without touching production code and without
+  //    reading or displaying `.env`.
+  const dotenvStubPath = require.resolve("dotenv");
+
+  delete require.cache[dotenvStubPath];
+
+  const dotenvStubModule = new (require("node:module").Module)(
+    dotenvStubPath,
+    null
+  );
+
+  dotenvStubModule.filename = dotenvStubPath;
+  dotenvStubModule.loaded = true;
+  dotenvStubModule.exports = { config: () => ({}) };
+  require.cache[dotenvStubPath] = dotenvStubModule;
+
+  const serverModule = require("../src/server.js");
   const source = fs.readFileSync(
     require.resolve("../src/server.js"),
     "utf8"
   );
 
-  const connectIndex = source.indexOf("await connectDB()");
-  // Match the real call, not the earlier prose mention of `app.listen()`.
-  const listenIndex = source.indexOf("app.listen(PORT");
-  const createAppIndex = source.indexOf("createApp()");
+  // 1. The app still comes from `createApp()` in app.js, and the database
+  //    connector still comes from `config/db.js`.
+  assert.match(source, /const \{ createApp \} = require\("\.\/app"\)/);
+  assert.match(source, /require\("\.\/config\/db"\)/);
+  assert.match(source, /connect = connectDB/);
 
-  assert.ok(createAppIndex >= 0, "server.js must obtain the app from createApp()");
-  assert.ok(connectIndex >= 0, "server.js must connect to the database");
-  assert.ok(listenIndex >= 0, "server.js must listen for requests");
-  assert.ok(
-    connectIndex < listenIndex,
-    "the database connection must be awaited before app.listen()"
-  );
+  // 2. The connection is awaited before the listener is created. A fake app and
+  //    a fake connector record the real call order. `startServer` performs the
+  //    real environment validation, so synthetic values are supplied and
+  //    restored; nothing is ever connected to.
+  const previousMongodb = process.env.MONGODB_URI;
+  const previousJwt = process.env.JWT_SECRET;
 
-  // The listener must use the same PORT expression as before.
+  process.env.MONGODB_URI = "mongodb://example.invalid/phishguard";
+  process.env.JWT_SECRET = "a-secret-for-tests";
+
+  try {
+    const order = [];
+    const handlers = {};
+    const fakeServer = {
+      once(event, handler) {
+        handlers[event] = handler;
+
+        return this;
+      }
+    };
+
+    const server = await serverModule.startServer({
+      port: 0,
+      connect: async () => {
+        order.push("connect");
+      },
+      buildApp: () => ({
+        listen: () => {
+          order.push("listen");
+
+          // Real `http.Server` emits `listening` asynchronously.
+          setImmediate(() => handlers.listening());
+
+          return fakeServer;
+        }
+      }),
+      logger: { log() {} }
+    });
+
+    assert.deepEqual(order, ["connect", "listen"]);
+    assert.equal(server, fakeServer);
+
+    // 3. A connection failure must mean the listener is never reached, so the
+    //    service never accepts a request it cannot serve. Environment
+    //    validation passes first, so this fails at connect and not before it.
+    let listenCalls = 0;
+
+    await assert.rejects(
+      serverModule.startServer({
+        port: 0,
+        connect: async () => {
+          throw new Error("simulated connection failure");
+        },
+        buildApp: () => ({
+          listen: () => {
+            listenCalls += 1;
+
+            return { once() {} };
+          }
+        }),
+        logger: { log() {} }
+      }),
+      /simulated connection failure/
+    );
+
+    assert.equal(listenCalls, 0);
+  } finally {
+    if (previousMongodb === undefined) {
+      delete process.env.MONGODB_URI;
+    } else {
+      process.env.MONGODB_URI = previousMongodb;
+    }
+
+    if (previousJwt === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = previousJwt;
+    }
+  }
+
+  // 4. The listener still uses the same PORT expression as before.
   assert.match(
     source,
     /const PORT = process\.env\.PORT \|\| 5000;/
