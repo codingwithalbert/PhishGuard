@@ -75,6 +75,12 @@ Run-Check "API test suite" {
             "configured, the database target is disposable/approved, no production data",
             "or production configuration is used, and required configuration is suitable.",
             "",
+            "Once authorized, the disposable-database isolation gate is enforced as well:",
+            "  apps\api\scripts\verifyTestDatabase.js",
+            "It fails closed unless a dedicated Atlas test cluster, database, and database",
+            "user are declared and attested as disposable. It never loads apps\api\.env and",
+            "never prints a credential. See docs\s5-test-environment.md.",
+            "",
             "Opt-in MongoDB integration suites keep their own individual flags and are",
             "not enabled by this gate."
         ) -join [System.Environment]::NewLine
@@ -85,6 +91,20 @@ Run-Check "API test suite" {
     Push-Location (Join-Path -Path $repoRoot -ChildPath "apps/api")
 
     try {
+        # Fail closed on an unverified database target BEFORE any suite can
+        # connect. This runs no query and prints no credential: it authorises or
+        # refuses. The suites are then pointed at the verified target.
+        node scripts/verifyTestDatabase.js
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "The disposable-database isolation gate refused the run. No tests were executed. See docs\s5-test-environment.md."
+        }
+
+        # dotenv never overwrites a variable that already exists in
+        # process.env, so setting MONGODB_URI here is what redirects the suites
+        # away from apps\api\.env. The value is copied, never printed.
+        $env:MONGODB_URI = $env:PHISHGUARD_TEST_MONGODB_URI
+
         npm test
 
         if ($LASTEXITCODE -ne 0) {
