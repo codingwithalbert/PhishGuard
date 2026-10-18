@@ -12,6 +12,10 @@ const {
   computePearsonCorrelation,
   isFiniteNumber
 } = require("./researchAnalytics.statistics");
+const {
+  MINIMUM_REPORTABLE_OBSERVATIONS,
+  applySmallCohortSuppression
+} = require("./researchAnalytics.suppression");
 
 // Research Analytics V1 dataset and statistics layer (spec 3, 4, 5, 6, 7, 8,
 // 9, 10, 11, and 12).
@@ -241,6 +245,69 @@ function countWhere(participants, predicate) {
   return participants.filter(predicate).length;
 }
 
+// Analytics Visualization V1 (spec section 3): the canonical exposure levels
+// are ordered by completed-component count, so a level is the index of its
+// canonical percentage in the frozen level list. Returning null for anything
+// outside that list keeps a caller from inventing a fifth level.
+function getTrainingExposurePercent(completedModules) {
+  if (
+    !Number.isInteger(completedModules) ||
+    completedModules < 0 ||
+    completedModules >= TRAINING_EXPOSURE_LEVELS.length
+  ) {
+    return null;
+  }
+
+  return TRAINING_EXPOSURE_LEVELS[completedModules];
+}
+
+// Spec section 3 and condition F: the display label is derived from the
+// canonical percentage list rather than duplicated as a literal, so the
+// backend and any client cannot drift apart. Produces exactly "0%", "33.3%",
+// "66.7%", and "100%" from the canonical 0, 33.33, 66.67, and 100.
+function getTrainingExposureLabelForLevel(completedModules) {
+  const percent = getTrainingExposurePercent(completedModules);
+
+  if (percent === null) {
+    return null;
+  }
+
+  if (percent === 0) {
+    return "0%";
+  }
+
+  if (percent === FULL_TRAINING_EXPOSURE) {
+    return "100%";
+  }
+
+  return `${percent.toFixed(1)}%`;
+}
+
+// Analytics Visualization V1 (spec section 3): selects a subset of the
+// existing eligible cohort using the integer completed-module count that is
+// already present on every in-memory participant.
+//
+// It never re-queries, never widens eligibility, and never introduces an
+// eligibility rule. `null` means no filter and returns the cohort untouched, so
+// the unfiltered path is byte-identical to the pre-existing behavior.
+//
+// Note N3: this runs BEFORE `buildResearchAnalyticsSummary`, so every aggregate
+// in a filtered response describes the selected cohort.
+function filterParticipantsByExposureLevel(participants, completedModules) {
+  if (!Array.isArray(participants)) {
+    return [];
+  }
+
+  if (completedModules === null || completedModules === undefined) {
+    return participants;
+  }
+
+  return participants.filter(
+    (participant) =>
+      participant.completedTrainingModules === completedModules
+  );
+}
+
 function buildCohortOverview(participants) {
   return {
     totalEligibleParticipants: participants.length,
@@ -371,11 +438,23 @@ function buildResearchAnalyticsSummary(participants = []) {
   };
 }
 
+// Analytics Visualization V1 (spec sections 3, 5.1, and 5.2).
+//
+// Ordering is deliberate and matches spec section 7, steps 3 and 4:
+//   1. build the full eligible dataset (unchanged)
+//   2. filter it by completed-module count, when a level is selected
+//   3. compute the summary with the EXISTING one-argument call
+//   4. apply the optional small-cohort suppression to the finished summary
+//
+// `participants` is always the full, unfiltered dataset, so nothing downstream
+// can mistake the filtered response for the population. The CSV export calls
+// `buildResearchParticipantDataset` directly and is unaffected by either step.
 async function buildResearchAnalytics({
   userModel,
   awarenessModel,
   phishingIdentificationModel,
-  trainingCompletionModel
+  trainingCompletionModel,
+  exposureLevel = null
 } = {}) {
   const participants = await buildResearchParticipantDataset({
     userModel,
@@ -384,9 +463,34 @@ async function buildResearchAnalytics({
     trainingCompletionModel
   });
 
+  const filteredParticipants = filterParticipantsByExposureLevel(
+    participants,
+    exposureLevel
+  );
+
+  const summary = buildResearchAnalyticsSummary(filteredParticipants);
+
+  // `all` and an omitted filter are never suppressed, so the unfiltered
+  // response is exactly what it was before this feature existed.
+  if (!Number.isInteger(exposureLevel)) {
+    return {
+      participants,
+      summary,
+      statisticsSuppressed: false,
+      minimumStatisticN: null
+    };
+  }
+
+  const { summary: suppressedSummary, statisticsSuppressed } =
+    applySmallCohortSuppression(summary, {
+      minimumStatisticN: MINIMUM_REPORTABLE_OBSERVATIONS
+    });
+
   return {
     participants,
-    summary: buildResearchAnalyticsSummary(participants)
+    summary: suppressedSummary,
+    statisticsSuppressed,
+    minimumStatisticN: MINIMUM_REPORTABLE_OBSERVATIONS
   };
 }
 
@@ -399,6 +503,9 @@ module.exports = {
   buildResearchAnalytics,
   buildResearchAnalyticsSummary,
   buildResearchParticipantDataset,
+  filterParticipantsByExposureLevel,
   formatParticipantId,
+  getTrainingExposureLabelForLevel,
+  getTrainingExposurePercent,
   isEligibleResearchUser
 };

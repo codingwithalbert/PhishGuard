@@ -101,6 +101,24 @@ function toCompletePairs(pairs) {
   return complete;
 }
 
+// A constant variable makes the Pearson coefficient mathematically undefined.
+//
+// The exact-equality comparison is deliberate and is what this helper exists
+// for. Accumulating variance from deviations of a running mean is not exact for
+// values that are not representable in binary: for six or more identical
+// observations of 33.33, the mean does not round-trip, the accumulated variance
+// is a residue of roughly 3e-28 rather than exactly zero, the denominator check
+// below is skipped, and a fabricated `0` is reported where the honest answer is
+// `null`. Comparing the observations directly is exact, and it cannot alter any
+// defined coefficient, because identical values always imply zero variance.
+function hasConstantValue(observations, index) {
+  const firstValue = observations[0][index];
+
+  return observations.every(
+    (observation) => observation[index] === firstValue
+  );
+}
+
 // Spec 9: Pearson correlation over pairwise complete observations. The result
 // is null whenever it is not mathematically defined, and the applicable sample
 // size is always reported. No qualitative label is attached to any value.
@@ -109,6 +127,15 @@ function computePearsonCorrelation(pairs) {
   const n = observations.length;
 
   if (n < 2) {
+    return { n, r: null };
+  }
+
+  // Checked before any variance accumulation, so a constant variable is
+  // reported as undefined rather than as a fabricated zero.
+  if (
+    hasConstantValue(observations, 0) ||
+    hasConstantValue(observations, 1)
+  ) {
     return { n, r: null };
   }
 
@@ -132,7 +159,9 @@ function computePearsonCorrelation(pairs) {
 
   const denominator = Math.sqrt(varianceX * varianceY);
 
-  // Zero variance in either variable leaves the coefficient undefined.
+  // Retained as defense in depth. A nonconstant variable has a genuinely
+  // positive variance, so this is normally unreachable once the exact
+  // constancy check above has run.
   if (denominator === 0) {
     return { n, r: null };
   }
