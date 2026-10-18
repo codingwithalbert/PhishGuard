@@ -8,7 +8,9 @@ import {
 import {
   createReport,
   getAnalyses,
-  getOwnReports
+  getOwnReports,
+  safeProductError,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
@@ -18,7 +20,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -189,11 +191,10 @@ function ReportCreatePage() {
       });
 
       if (!isCreatedReport(data?.report)) {
-        const formatError = new Error(
-          "The created Report could not be read in the expected format."
+        const formatError = safeProductError(
+          "The created Report could not be read in the expected format.",
+          500
         );
-
-        formatError.status = 500;
         throw formatError;
       }
 

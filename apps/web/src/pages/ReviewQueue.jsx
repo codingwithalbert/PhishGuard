@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
-import { getReviewQueue } from "../services/api";
+import {
+  getReviewQueue,
+  safeProductError,
+  toSafeErrorMessage
+} from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 import {
   formatReportingDate,
@@ -17,7 +21,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -116,11 +120,10 @@ function ReviewQueuePage() {
       const data = await getReviewQueue();
 
       if (!isReviewQueueResponse(data)) {
-        const formatError = new Error(
-          "The IT Review queue could not be read in the expected format."
+        const formatError = safeProductError(
+          "The IT Review queue could not be read in the expected format.",
+          500
         );
-
-        formatError.status = 500;
         throw formatError;
       }
 

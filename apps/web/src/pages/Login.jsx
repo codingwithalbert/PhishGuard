@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
-import { loginUser } from "../services/api";
+import { loginUser, toSafeErrorMessage } from "../services/api";
 import { storeSession } from "../services/session";
+
+const LOGIN_ERROR_MESSAGE =
+  "Sign in could not be completed. Please try again.";
 
 function getLoginNotice(locationState) {
   return typeof locationState?.message === "string"
@@ -48,7 +51,7 @@ function Login() {
 
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message);
+      setError(toSafeErrorMessage(err, LOGIN_ERROR_MESSAGE));
     } finally {
       setLoading(false);
     }

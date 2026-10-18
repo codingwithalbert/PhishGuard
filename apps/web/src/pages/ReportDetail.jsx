@@ -16,7 +16,9 @@ import {
 import {
   createOwnReportMessage,
   getOwnReport,
-  getOwnReportMessages
+  getOwnReportMessages,
+  safeProductError,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
@@ -26,7 +28,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -132,9 +134,7 @@ function ReportDetailPage() {
     setMessages([]);
 
     if (!reportId) {
-      const missingIdError = new Error("Report ID is unavailable");
-
-      missingIdError.status = 404;
+      const missingIdError = safeProductError("Report ID is unavailable", 404);
       setError({
         message: missingIdError.message,
         status: missingIdError.status
@@ -215,11 +215,10 @@ function ReportDetailPage() {
         const refreshedMessages = await getOwnReportMessages(report.id);
 
         if (!isMessagesResponse(refreshedMessages)) {
-          const refreshError = new Error(
-            "The Report conversation could not be refreshed."
+          const refreshError = safeProductError(
+            "The Report conversation could not be refreshed.",
+            500
           );
-
-          refreshError.status = 500;
           throw refreshError;
         }
 

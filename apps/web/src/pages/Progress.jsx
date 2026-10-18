@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import useEntranceMotion from "../hooks/useEntranceMotion";
-import { getProgress } from "../services/api";
+import {
+  getProgress,
+  safeProductError,
+  toSafeErrorMessage
+} from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
 function isAssessmentAttempt(attempt, totalKey) {
@@ -73,7 +77,7 @@ function hasAssessmentData(group) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -424,11 +428,10 @@ function ProgressPage() {
       const data = await getProgress();
 
       if (!isProgressResponse(data)) {
-        const formatError = new Error(
-          "The progress data could not be read in the expected format."
+        const formatError = safeProductError(
+          "The progress data could not be read in the expected format.",
+          500
         );
-
-        formatError.status = 500;
         throw formatError;
       }
 

@@ -4,6 +4,8 @@ import PageHeader from "../components/PageHeader";
 import {
   changePassword,
   getCurrentProfile,
+  safeProductError,
+  toSafeErrorMessage,
   updateProfileName
 } from "../services/api";
 import {
@@ -61,7 +63,7 @@ function isSessionError(error) {
 // the original error is copied.
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -189,11 +191,10 @@ function EditProfileForm({ profile, onUpdated }) {
     updateProfileName(trimmedName)
       .then((data) => {
         if (!isProfileResponse(data)) {
-          const formatError = new Error(
-            "The profile response could not be read in the expected format."
+          const formatError = safeProductError(
+            "The profile response could not be read in the expected format.",
+            500
           );
-
-          formatError.status = 500;
           throw formatError;
         }
 
@@ -327,11 +328,10 @@ function ChangePasswordForm() {
       );
 
       if (!isChangePasswordResponse(data)) {
-        const formatError = new Error(
-          "The password change response could not be read in the expected format."
+        const formatError = safeProductError(
+          "The password change response could not be read in the expected format.",
+          500
         );
-
-        formatError.status = 500;
         throw formatError;
       }
 
@@ -446,11 +446,10 @@ function ProfilePage() {
       const data = await getCurrentProfile();
 
       if (!isProfileResponse(data)) {
-        const formatError = new Error(
-          "The account information could not be read in the expected format."
+        const formatError = safeProductError(
+          "The account information could not be read in the expected format.",
+          500
         );
-
-        formatError.status = 500;
         throw formatError;
       }
 

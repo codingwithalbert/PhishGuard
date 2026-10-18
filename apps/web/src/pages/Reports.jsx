@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
-import { getOwnReports } from "../services/api";
+import {
+  getOwnReports,
+  safeProductError,
+  toSafeErrorMessage
+} from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 import {
   formatReportingDate,
@@ -17,7 +21,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -95,11 +99,10 @@ function ReportsPage() {
       const data = await getOwnReports();
 
       if (!isReportsResponse(data)) {
-        const formatError = new Error(
-          "The Reports data could not be read in the expected format."
+        const formatError = safeProductError(
+          "The Reports data could not be read in the expected format.",
+          500
         );
-
-        formatError.status = 500;
         throw formatError;
       }
 

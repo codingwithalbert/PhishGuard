@@ -5,40 +5,50 @@ import {
   SIGN_IN_REQUIRED_MESSAGE
 } from "./session";
 
+import {
+  ApiError,
+  createJsonRequester,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  isRequestCancelled,
+  REQUEST_ERROR_KINDS,
+  REQUEST_ERROR_MESSAGES,
+  requestBlob,
+  safeProductError,
+  toSafeErrorMessage
+} from "./apiTransport";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-async function request(endpoint, options = {}) {
-  const { requiresAuth = false, ...fetchOptions } = options;
-  const requestToken = requiresAuth ? getStoredToken() : null;
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...fetchOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...(requiresAuth ? getAuthHeaders(requestToken) : {}),
-      ...fetchOptions.headers
-    }
-  });
+export {
+  ApiError,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  isRequestCancelled,
+  REQUEST_ERROR_KINDS,
+  REQUEST_ERROR_MESSAGES,
+  safeProductError,
+  toSafeErrorMessage
+};
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    const error = new Error(data.error || "Something went wrong");
-
-    error.status = response.status;
-
-    if (requiresAuth && isInvalidSessionError(error)) {
-      handleInvalidSessionForRequest(requestToken, {
-        message: requestToken
-          ? undefined
-          : SIGN_IN_REQUIRED_MESSAGE
-      });
-    }
-
-    throw error;
+/**
+ * The shared requester.
+ *
+ * `requiresAuth` keeps its existing meaning: it attaches the bearer token and
+ * enables session-invalidation handling. Session invalidation fires only for a
+ * recognized 403/401 rejection, which the transport preserves exactly, so this
+ * behavior is unchanged from the previous inline implementation.
+ */
+const request = createJsonRequester({
+  baseUrl: API_URL,
+  fetchImpl: (...args) => globalThis.fetch(...args),
+  getAuthToken: getStoredToken,
+  buildAuthHeaders: getAuthHeaders,
+  isInvalidSessionError,
+  onInvalidSession: (requestToken) => {
+    handleInvalidSessionForRequest(requestToken, {
+      message: requestToken ? undefined : SIGN_IN_REQUIRED_MESSAGE
+    });
   }
-
-  return data;
-}
+});
 
 function getAuthHeaders(token = getStoredToken()) {
   if (!token) {
@@ -153,10 +163,24 @@ export async function changePassword(currentPassword, newPassword) {
 // Research Analytics V1: aggregate research analytics. Admin only; the backend
 // enforces authorization. This endpoint returns aggregate values only and never
 // returns participant-level records.
-export function getResearchAnalytics() {
-  return request("/api/research/analytics", {
+//
+// Analytics Visualization V1: an optional Training Exposure filter. When
+// `exposureLevel` is "all" the parameter is omitted entirely, so the request is
+// byte-identical to the pre-existing unfiltered call and the backend returns its
+// original response shape with no `filter` envelope. A selected level is sent as
+// the completed-module count the API contract accepts.
+export function getResearchAnalytics({ exposureLevel, signal } = {}) {
+  const query =
+    typeof exposureLevel === "string" &&
+    exposureLevel.length > 0 &&
+    exposureLevel !== "all"
+      ? `?exposureLevel=${encodeURIComponent(exposureLevel)}`
+      : "";
+
+  return request(`/api/research/analytics${query}`, {
     method: "GET",
-    requiresAuth: true
+    requiresAuth: true,
+    signal
   });
 }
 
@@ -182,50 +206,38 @@ function resolveCsvFilename(contentDisposition) {
     : RESEARCH_CSV_FALLBACK_FILENAME;
 }
 
-// The CSV endpoint is not JSON, so it bypasses request() instead of being
-// forced through a JSON parser. The response is only read as a download blob:
-// it is never parsed, logged, displayed, or stored.
+// The CSV endpoint is not JSON, so it reads a blob rather than forcing the
+// payload through a JSON parser. The response is only read as a download blob:
+// it is never parsed, logged, displayed, or stored. It is a read-only GET, so
+// the shared full-lifecycle deadline applies — including the blob read — and no
+// retry semantics are involved.
 async function requestResearchCsv() {
   const requestToken = getStoredToken();
-  const response = await fetch(`${API_URL}/api/research/export.csv`, {
-    method: "GET",
-    headers: {
-      ...getAuthHeaders(requestToken),
-      Accept: "text/csv"
-    }
-  });
 
-  if (!response.ok) {
-    const error = new Error("The research export could not be downloaded.");
-    error.status = response.status;
-
-    try {
-      const data = await response.json();
-
-      if (typeof data?.error === "string" && data.error.length > 0) {
-        error.message = data.error;
+  try {
+    const { blob, headers } = await requestBlob({
+      baseUrl: API_URL,
+      path: "/api/research/export.csv",
+      fetchImpl: (...args) => globalThis.fetch(...args),
+      headers: {
+        ...getAuthHeaders(requestToken),
+        Accept: "text/csv"
       }
-    } catch {
-      // A non-JSON error body is ignored; the safe default message stands.
-    }
+    });
 
+    return {
+      blob,
+      filename: resolveCsvFilename(headers.get("content-disposition"))
+    };
+  } catch (error) {
     if (isInvalidSessionError(error)) {
       handleInvalidSessionForRequest(requestToken, {
-        message: requestToken
-          ? undefined
-          : SIGN_IN_REQUIRED_MESSAGE
+        message: requestToken ? undefined : SIGN_IN_REQUIRED_MESSAGE
       });
     }
 
     throw error;
   }
-
-  return {
-    blob: await response.blob(),
-    filename: resolveCsvFilename(
-      response.headers.get("content-disposition")
-    )
-  };
 }
 
 export async function downloadResearchCsv() {
@@ -249,23 +261,10 @@ export async function downloadResearchCsv() {
   return { filename };
 }
 
-// Only client-facing 4xx messages produced by the API are surfaced. Network
-// failures, unexpected response bodies, and server errors fall back to the
-// caller's safe message so internal details are never displayed.
-export function toSafeErrorMessage(error, fallback) {
-  if (
-    error &&
-    typeof error.status === "number" &&
-    error.status >= 400 &&
-    error.status < 500 &&
-    typeof error.message === "string" &&
-    error.message.trim().length > 0
-  ) {
-    return error.message;
-  }
-
-  return fallback;
-}
+// `toSafeErrorMessage` is the single choke point for user-visible error text.
+// It is defined and documented in `apiTransport.js` so the whole failure
+// contract lives in one testable place, and re-exported here because every
+// page already imports it from this module.
 
 export function analyzeUrl(url) {
   return request("/api/analyze", {

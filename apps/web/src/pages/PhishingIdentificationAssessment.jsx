@@ -9,7 +9,9 @@ import PageHeader from "../components/PageHeader";
 import {
   getLatestPhishingIdentificationAssessment,
   getPhishingIdentificationScenarios,
-  submitPhishingIdentificationAssessment
+  safeProductError,
+  submitPhishingIdentificationAssessment,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
@@ -35,7 +37,7 @@ function isScenarioSet(scenarios) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -202,7 +204,7 @@ function PhishingIdentificationAssessment() {
       );
 
       if (!data?.assessment) {
-        throw new Error("The assessment result could not be read.");
+        throw safeProductError("The assessment result could not be read.");
       }
 
       setLatestResult(data.assessment);
