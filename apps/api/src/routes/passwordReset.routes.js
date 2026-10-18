@@ -20,12 +20,16 @@ const {
 function createPasswordResetRouter({
   service,
   forgotPasswordWorkflow = productionForgotPasswordWorkflow,
-  forgotPasswordRateLimiter = forgotPasswordLimiter
+  forgotPasswordRateLimiter = forgotPasswordLimiter,
+  recordAuditEvent,
+  auditRecordTimeoutMs
 } = {}) {
   const router = express.Router();
   const controller = createPasswordResetController({
     service,
-    forgotPasswordWorkflow
+    forgotPasswordWorkflow,
+    recordAuditEvent,
+    auditRecordTimeoutMs
   });
 
   router.post(

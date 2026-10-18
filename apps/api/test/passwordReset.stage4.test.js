@@ -1157,7 +1157,10 @@ test("HTTP contract stays identical for existing, missing, and failed workflows"
           ? createPreparedAccount()
           : null;
       },
-      forgotPasswordRateLimiter: (req, res, next) => next()
+      forgotPasswordRateLimiter: (req, res, next) => next(),
+      // Persistent audit recording is faked so this offline contract test never
+      // attempts a database write.
+      recordAuditEvent: async () => null
     })
   );
   app.use("/api/auth", authRoutes);

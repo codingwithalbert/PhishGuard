@@ -24,6 +24,8 @@ const workflowCalls = [];
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+// Persistent audit recording is faked so the limiter tests never attempt a
+// database write once a request reaches the controller.
 app.use(
   "/api/auth",
   createPasswordResetRouter({
@@ -35,7 +37,8 @@ app.use(
     forgotPasswordWorkflow: async () => {
       workflowCalls.push(Date.now());
       return null;
-    }
+    },
+    recordAuditEvent: async () => null
   })
 );
 app.use("/api/auth", authRoutes);

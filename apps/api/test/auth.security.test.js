@@ -1,4 +1,4 @@
-const { after, before, test } = require("node:test");
+const { after, before, mock, test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const http = require("node:http");
@@ -7,11 +7,19 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const User = require("../src/models/User");
+const AuditLog = require("../src/models/AuditLog");
 const authRoutes = require("../src/routes/auth.routes");
 const errorHandler = require("../src/middleware/error.middleware");
 
 // Exercise the production router, validators, controllers, JWTs, and bcrypt.
 // Only User persistence is stubbed; no dotenv, MongoDB, or mail is used.
+//
+// Persistent audit recording is stubbed too. The login controller writes an
+// audit event through `AuditLog.create`; without this stub that write would sit
+// in Mongoose command buffering (no database is connected here) and delay every
+// login by the buffer timeout. Stubbing the model keeps the real login path
+// intact while removing the database dependency entirely.
+let auditStub;
 const testJwtSecret = crypto.randomBytes(32).toString("hex");
 const PASSWORD = crypto.randomBytes(24).toString("hex");
 const WRONG_PASSWORD = crypto.randomBytes(24).toString("hex");
@@ -38,6 +46,14 @@ before(async () => {
   previousJwtSecret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = testJwtSecret;
   passwordHash = await bcrypt.hash(PASSWORD, 12);
+
+  // The audit service calls `AuditLog.create`; replace it with an in-memory
+  // recorder so login never waits on Mongoose buffering or touches a database.
+  auditStub = mock.method(AuditLog, "create", async (event) => ({
+    _id: "auth-security-audit-record",
+    ...event
+  }));
+
   server = http.createServer(app);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -51,6 +67,9 @@ after(async () => {
       });
     }
   } finally {
+    if (auditStub) {
+      auditStub.mock.restore();
+    }
     if (previousJwtSecret === undefined) {
       delete process.env.JWT_SECRET;
     } else {
@@ -353,6 +372,20 @@ test("successful registration returns only safe fields without protected credent
   const response = await register();
   const data = await assertSafeResponse(response, 201, ["success", "message", "user"], state.stored[0]);
   assert.equal(data.message, "Registration successful");
+
+  // The persistent audit write runs on the real registration path and is
+  // captured by the stub rather than a database.
+  const auditEvents = auditStub.mock.calls.map((call) => call.arguments[0]);
+  const accountId = String(state.stored[0]._id);
+  assert.deepEqual(auditEvents.at(-1), {
+    category: "account",
+    action: "REGISTRATION_SUCCESS",
+    outcome: "success",
+    actor: accountId,
+    actorRole: "user",
+    resourceType: "user",
+    resourceId: accountId
+  });
 });
 
 test("successful login returns only safe fields and a JWT without protected credential state", async (t) => {
@@ -369,6 +402,17 @@ test("successful login returns only safe fields and a JWT without protected cred
   assert.equal(Number.isSafeInteger(claims.tokenVersion), true);
   assert.equal(claims.exp - claims.iat, 60 * 60);
   assert.deepEqual(state.selections, ["+password"]);
+
+  // The persistent audit write still runs on the real login path, but it is
+  // captured by the stub rather than a database.
+  const auditEvents = auditStub.mock.calls.map((call) => call.arguments[0]);
+  assert.deepEqual(auditEvents.at(-1), {
+    category: "authentication",
+    action: "LOGIN_SUCCESS",
+    outcome: "success",
+    actor: String(account._id),
+    actorRole: "user"
+  });
 });
 
 test("GET /api/auth/me returns only safe fields without protected credential state", async (t) => {
