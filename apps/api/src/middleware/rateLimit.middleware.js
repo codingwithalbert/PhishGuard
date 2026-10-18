@@ -59,6 +59,16 @@ const registerLimiter = rateLimit({
 // limiters: those are pre-authentication and IP-keyed, and coupling them would
 // change existing public endpoint behavior.
 //
+// STORE LIMITATION, unchanged and unaddressed by this module: every limiter uses
+// the default in-memory store. Counters therefore live in the Node process, so
+// they reset on restart and are not shared between instances. This is adequate
+// for the single-instance deployment the application is designed for and is
+// sufficient against the abuse these limits target, because the buckets are
+// keyed on a server-authoritative account id rather than on a forwarding
+// header. Before any horizontal scale-out a shared store becomes mandatory,
+// otherwise the effective limit is multiplied by the instance count. Nothing in
+// this module detects or prevents that.
+//
 // Each limiter must be mounted after `authenticate` and after
 // `requireAuthenticatedIdentity` so `req.user` is populated first.
 
@@ -133,6 +143,29 @@ const reportCreateLimiter = rateLimit({
   message: AUTHENTICATED_LIMIT_MESSAGE
 });
 
+// URL analysis limiter. Every accepted analysis performs a deterministic,
+// purely local lexical evaluation and then one Analysis document write. There
+// is no outbound network call and no email, so this primitive is far cheaper
+// than a report submission and the budget is correspondingly more generous,
+// but the write amplification is real: without a ceiling a single account could
+// grow the `analyses` collection without bound.
+//
+// Sixty per fifteen minutes is one request every fifteen seconds sustained, and
+// is far above realistic student use. Analysis is an interactive, deliberate
+// action - a student checks a link or two at a time before acting on it - so the
+// limit is set to catch automated abuse rather than to pace a human.
+//
+// It uses its own instance so analysis traffic never consumes, resets, or
+// shares a quota with report creation or messaging.
+const analyzeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: authenticatedUserKey,
+  message: AUTHENTICATED_LIMIT_MESSAGE
+});
+
 // Student report message limiter. Each accepted message writes a ReportMessage
 // document for a report the sender owns; unlike the reviewer path it sends no
 // outbound email. The window and limit deliberately mirror
@@ -150,6 +183,7 @@ const studentMessageLimiter = rateLimit({
 
 module.exports = {
   AUTHENTICATED_LIMIT_MESSAGE,
+  analyzeLimiter,
   authenticatedUserKey,
   credentialChangeLimiter,
   forgotPasswordLimiter,

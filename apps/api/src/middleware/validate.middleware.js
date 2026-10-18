@@ -12,6 +12,9 @@ const {
 const {
   getTrainingModuleIds
 } = require("../services/training.service");
+const {
+  MAX_ANALYSIS_URL_LENGTH
+} = require("../services/analysis.constants");
 
 const AWARENESS_QUESTION_IDS = new Set(getAwarenessQuestionIds());
 const AWARENESS_SELECTED_ANSWERS = new Set(getValidSelectedAnswers());
@@ -331,6 +334,17 @@ function validateAnalyzeRequest(req, res, next) {
     });
   }
 
+  // Length is checked before parsing. The body cap allows a URL approaching
+  // 1 MB, and parsing a string that large is wasted work for a request that is
+  // going to be refused anyway. The value is shared with the Analysis schema so
+  // the request boundary and the persistence boundary cannot drift apart.
+  if (trimmedUrl.length > MAX_ANALYSIS_URL_LENGTH) {
+    return res.status(400).json({
+      success: false,
+      error: `URL must be ${MAX_ANALYSIS_URL_LENGTH} characters or fewer`
+    });
+  }
+
   let parsedUrl;
 
   try {
@@ -386,6 +400,7 @@ function validateMongoId(req, res, next) {
 }
 
 module.exports = {
+  MAX_ANALYSIS_URL_LENGTH,
   validateAwarenessSubmission,
   validatePhishingIdentificationSubmission,
   validateTrainingCompletionRequest,
