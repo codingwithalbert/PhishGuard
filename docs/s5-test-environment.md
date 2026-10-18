@@ -206,7 +206,7 @@ logs. The same value is required for every stage, cleanup, and lock recovery.
 ### 3.2 Verify the gate
 
 ```powershell
-Set-Location C:\Users\icojo\PhishGuard\apps\api
+Set-Location <repo-root>\apps\api
 node scripts/verifyTestDatabase.js
 ```
 
@@ -320,7 +320,7 @@ node scripts/runS5Command.js harness
 or, equivalently and directly:
 
 ```powershell
-Set-Location C:\Users\icojo\PhishGuard
+Set-Location <repo-root>
 .\harness\verify.ps1
 ```
 
