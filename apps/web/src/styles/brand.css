@@ -17,15 +17,95 @@
   height: 22px;
 }
 
-/* Keep the existing centered auth column and its direct-child form rules. */
+/*
+ * Login V2 Phase A — "Desk Split": branding and concise product context
+ * on the left, the single form surface on the right at the desktop auth
+ * breakpoint. The base rules keep the existing single-column mobile
+ * composition (intro, then the form column) and hide the optional
+ * context rows below that breakpoint.
+ */
+
+/* Single-column base (mobile). */
 .auth-layout {
   position: relative;
   isolation: isolate;
 }
 
-.cyber-scene {
+.auth-intro {
+  width: min(560px, calc(100% - 2rem));
+  margin: 2rem auto 0;
+}
+
+.auth-intro h1 {
+  margin: 0 0 0.5rem;
+}
+
+.auth-context {
   display: none;
-  pointer-events: none;
+}
+
+.auth-layout > main.auth-main {
+  min-height: 60vh;
+  padding-top: 0;
+}
+
+/* Restrained caption introducing the single form panel. */
+.auth-panel-label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* Password field: the label and recovery link share one visual row, but
+   the link is placed after the input in the DOM so keyboard order is
+   Email, Password, then the recovery link. Grid placement only arranges
+   the already-linear source order for sighted layout. */
+.auth-password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem;
+}
+
+.auth-password-field > label {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.auth-password-field > input {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.auth-password-field > .auth-forgot-link {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.auth-forgot-link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The lone form card is the only elevated auth surface; match the shared
+   section shadow so it reads as the working panel of the split. */
+.auth-layout > main.auth-main > form {
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* The registration entry sits inside the form panel behind a hairline
+   divider. Scoped to footer links inside the auth form so the Register,
+   Forgot Password, and Reset Password footers (outside the form) are
+   untouched. */
+.auth-layout > main.auth-main > form > .auth-footer-link {
+  margin: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
 }
 
 @media (min-width: 1024px) {
@@ -35,7 +115,7 @@
 
   .auth-layout {
     display: grid;
-    grid-template-columns: minmax(0, 0.45fr) minmax(0, 0.55fr);
+    grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.45fr);
     align-items: center;
     justify-content: center;
     gap: var(--space-12);
@@ -46,36 +126,54 @@
     padding: 0 var(--space-8);
   }
 
-  .auth-layout > main.auth-main {
-    width: 100%;
+  .auth-intro {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: auto;
     margin: 0;
   }
 
-  .cyber-scene {
-    position: relative;
+  /* Single form surface on the right pane. */
+  .auth-layout > main.auth-main {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+  }
+
+  .auth-context {
     display: grid;
-    place-items: center;
     width: 100%;
-    max-width: 600px;
-    aspect-ratio: 1;
-    justify-self: center;
+    margin: var(--space-8) 0 0;
+    padding: 0;
+    gap: 0;
+    list-style: none;
   }
 
-  .cyber-scene-fallback {
+  .auth-context li {
+    margin: 0;
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .auth-context li:last-child {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .auth-context-label {
     display: block;
-    width: 100%;
-    height: 100%;
-    color: var(--color-accent);
+    color: var(--color-text-strong);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.4;
   }
 
-  .cyber-scene-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .cyber-scene[data-ready="true"] .cyber-scene-fallback {
-    visibility: hidden;
+  .auth-context-description {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
   }
 }

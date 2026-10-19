@@ -1,16 +1,21 @@
 /*
  * Shared public-auth layout for Login, Register, Forgot Password, and
- * Reset Password. Provides the PhishGuard brand identity and a consistent
- * centered structure so the four pages feel connected to the authenticated
- * application without duplicating markup.
+ * Reset Password. Phase A of the Login V2 redesign ("Desk Split") replaces
+ * the decorative auth scene with a calm two-pane composition: the brand,
+ * page title, and optional product context on the left, and the single
+ * form surface on the right. The layout collapses to one column and hides
+ * the context rows below the desktop auth breakpoint (styles/brand.css).
+ *
+ * `context` is an optional array of informational { label, description }
+ * pairs rendered in the intro pane; rows are never interactive.
  */
 import BrandMark from "./BrandMark";
-import CyberScene from "./CyberScene";
 import useEntranceMotion from "../hooks/useEntranceMotion";
 
-function AuthLayout({ title, description, children }) {
+function AuthLayout({ title, description, context, children }) {
   const entranceRef = useEntranceMotion({
-    selector: ":scope > .auth-brand, :scope > h1, :scope > .auth-description, :scope > form",
+    selector:
+      ":scope > .auth-intro .auth-brand, :scope > .auth-intro > h1, :scope > .auth-intro > .auth-description, :scope > .auth-intro > .auth-context, :scope > main.auth-main",
     activationKey: title,
     duration: 0.35,
     stagger: 0.045,
@@ -18,8 +23,8 @@ function AuthLayout({ title, description, children }) {
   });
 
   return (
-    <div className="auth-layout">
-      <main className="auth-main" ref={entranceRef}>
+    <div className="auth-layout" ref={entranceRef}>
+      <div className="auth-intro">
         <div className="auth-brand">
           <div className="brand-mark" aria-hidden="true">
             <BrandMark />
@@ -32,9 +37,21 @@ function AuthLayout({ title, description, children }) {
           <p className="auth-description">{description}</p>
         ) : null}
 
-        {children}
-      </main>
-      <CyberScene />
+        {Array.isArray(context) && context.length ? (
+          <ul className="auth-context">
+            {context.map((row) => (
+              <li key={row.label}>
+                <span className="auth-context-label">{row.label}</span>
+                <span className="auth-context-description">
+                  {row.description}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      <main className="auth-main">{children}</main>
     </div>
   );
 }

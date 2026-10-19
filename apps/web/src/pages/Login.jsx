@@ -7,6 +7,26 @@ import { storeSession } from "../services/session";
 const LOGIN_ERROR_MESSAGE =
   "Sign in could not be completed. Please try again.";
 
+/*
+ * Informational context rows for the Login V2 "Desk Split" branding pane.
+ * Rendered only as supplementary rows at the desktop auth breakpoint;
+ * wording stays accurate to what the product implements.
+ */
+const LOGIN_CONTEXT = [
+  {
+    label: "Analyze suspicious URLs",
+    description: "Review potential phishing indicators."
+  },
+  {
+    label: "Build awareness",
+    description: "Learn to recognize phishing attempts."
+  },
+  {
+    label: "Report incidents",
+    description: "Submit suspicious activity for review."
+  }
+];
+
 function getLoginNotice(locationState) {
   return typeof locationState?.message === "string"
     ? locationState.message
@@ -59,10 +79,13 @@ function Login() {
 
   return (
     <AuthLayout
-      title="PhishGuard Login"
-      description="Sign in to analyze suspicious URLs, build cybersecurity awareness, and report incidents to school IT."
+      title="Welcome back."
+      description="Sign in to continue to your PhishGuard workspace."
+      context={LOGIN_CONTEXT}
     >
       <form onSubmit={handleSubmit}>
+        <p className="auth-panel-label">Account access</p>
+
         <div>
           <label htmlFor="email">Email</label>
           <input
@@ -77,7 +100,7 @@ function Login() {
           />
         </div>
 
-        <div>
+        <div className="auth-password-field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
@@ -89,15 +112,21 @@ function Login() {
             maxLength="128"
             autoComplete="current-password"
           />
+          <Link
+            to="/forgot-password"
+            className="auth-forgot-link"
+          >
+            Forgot password?
+          </Link>
         </div>
-
-        <p className="auth-form-meta">
-          <Link to="/forgot-password">Forgot password?</Link>
-        </p>
 
         <button type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Login"}
         </button>
+
+        <p className="auth-footer-link">
+          Don&apos;t have an account? <Link to="/register">Register</Link>
+        </p>
       </form>
 
       {error && <p role="alert">{error}</p>}
@@ -107,10 +136,6 @@ function Login() {
           {notice}
         </p>
       )}
-
-      <p className="auth-footer-link">
-        Don&apos;t have an account? <Link to="/register">Register</Link>
-      </p>
     </AuthLayout>
   );
 }
