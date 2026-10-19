@@ -3526,45 +3526,75 @@ main.auth-main > form button {
   line-height: 1.5;
 }
 
-/* Research Analytics V1 */
+/* Research Analytics V2 — Evidence Desk: Calm Signal
+   Presentation-only frontend refinement. Statistical values, cohort rules,
+   suppression semantics and export scope are unchanged. */
 
 .research-page {
-  width: min(1120px, calc(100% - 2rem));
+  width: min(1180px, calc(100% - 2rem));
 }
 
-.research-intro {
-  margin-bottom: 1.5rem;
+.research-page .page-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
 }
 
-.research-intro-note {
-  max-width: 75ch;
-  margin-top: 0.75rem;
+.research-context-line {
+  max-width: 78ch;
+  margin-top: 0.55rem;
   margin-bottom: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
 }
 
+.research-context-line a {
+  color: var(--primary);
+  font-weight: 650;
+}
+
+/* Panels ---------------------------------------------------------------- */
+
 .research-panel {
-  margin-bottom: 1.25rem;
-  border-color: rgba(56, 189, 248, 0.3);
+  margin-bottom: 1rem;
+  border-color: rgba(56, 189, 248, 0.26);
 }
 
 .research-panel h2 {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
 }
 
 .research-panel-note {
-  max-width: 75ch;
-  margin-bottom: 1rem;
+  max-width: 78ch;
+  margin: 0.25rem 0 1rem;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
 }
+
+/* Methods and privacy are readable sections, not result cards. The quieter
+   surface keeps the charts and tables visually dominant. */
+.research-reading-panel {
+  background: rgba(8, 21, 37, 0.72);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.research-boundary-note {
+  max-width: 82ch;
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+/* Loading, error and empty states --------------------------------------- */
 
 .research-loading-panel,
 .research-error-panel,
 .research-empty-state,
 .research-partial-state {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .research-loading-panel .awareness-skeleton {
@@ -3595,40 +3625,230 @@ main.auth-main > form button {
   border-color: var(--primary);
 }
 
-.research-cohort-grid {
+.research-export-error {
+  margin-top: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.research-export-error p {
+  margin: 0 0 0.4rem;
+}
+
+.research-export-error p:last-child {
+  margin-bottom: 0;
+}
+
+/* Research control bar -------------------------------------------------- */
+
+.research-toolbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
-  margin: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 14px;
+  background: rgba(13, 27, 45, 0.88);
+  box-shadow: none;
 }
 
-.research-cohort-grid > div {
+.research-toolbar-main {
+  display: grid;
   min-width: 0;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(8, 21, 37, 0.72);
+  gap: 0.55rem;
 }
 
-.research-cohort-grid dt {
+.research-toolbar-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+}
+
+.research-toolbar-heading-row h2,
+.research-toolbar-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.research-toolbar-export {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.45rem;
+  padding-left: 1.35rem;
+  border-left: 1px solid var(--border);
+}
+
+.research-toolbar-export button {
+  justify-self: start;
+  min-width: 150px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.86rem;
+}
+
+.research-export-rule {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.research-filter {
+  display: grid;
+  grid-template-columns: minmax(170px, 230px) minmax(0, 1fr);
+  align-items: end;
+  gap: 0.3rem 0.9rem;
+  max-width: none;
+}
+
+.research-filter-field {
+  display: grid;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.research-filter-field label {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.research-filter-field select {
+  padding: 0.55rem 0.7rem;
+}
+
+/* Native focus styling, scoped so no unrelated page control changes. */
+.research-filter-field select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.research-filter-hint {
+  grid-column: 2;
+  align-self: end;
+  margin: 0 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* Shown only while a new selection is in flight, so the figures still on screen
+   are never mistaken for the answer to the currently selected level. */
+.research-filter-pending {
+  grid-column: 1 / -1;
+  margin: 0.1rem 0 0;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.research-scope-line {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.research-scope-line strong {
+  color: var(--primary);
+}
+
+/* Cohort context rail --------------------------------------------------- */
+
+.research-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.35rem 1.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.research-section-head h2 {
+  margin-bottom: 0.2rem;
+}
+
+.research-section-head .research-panel-note {
+  margin-bottom: 0;
+}
+
+.research-cohort-scope {
+  max-width: 32ch;
+  margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.research-cohort-scope strong {
+  color: var(--primary);
+}
+
+.research-cohort-rail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 2rem;
+  margin: 0.9rem 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.research-metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.research-metric dt {
+  color: var(--muted);
+  font-size: 0.84rem;
   line-height: 1.4;
 }
 
-.research-cohort-grid dd {
-  margin: 0.4rem 0 0;
-  color: var(--primary);
-  font-size: 1.6rem;
-  font-weight: 800;
+.research-metric dd {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
+/* Assessment statistics ------------------------------------------------- */
+
 .research-statistics-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-  align-items: start;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.research-stat-block {
+  min-width: 0;
+}
+
+.research-stat-block + .research-stat-block {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.research-stat-block h3 {
+  margin: 0 0 0.25rem;
+  color: var(--text-strong);
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+}
+
+.research-stat-block .research-panel-note {
+  margin-bottom: 0.75rem;
 }
 
 .research-table-scroll {
@@ -3636,22 +3856,30 @@ main.auth-main > form button {
   -webkit-overflow-scrolling: touch;
 }
 
+.research-table-scroll:focus-visible,
+.research-chart-scroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 .research-stat-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: 0.87rem;
 }
 
 .research-table-caption {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.55rem;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
   text-align: left;
 }
 
 .research-stat-table th,
 .research-stat-table td {
-  padding: 0.6rem 0.5rem;
+  padding: 0.5rem 0.45rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
@@ -3659,8 +3887,8 @@ main.auth-main > form button {
 
 .research-stat-table thead th {
   color: var(--muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -3669,147 +3897,30 @@ main.auth-main > form button {
   font-weight: 650;
 }
 
-.research-stat-table td {
+.research-stat-table .research-cell-number {
+  text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.research-boundary-note {
-  max-width: 80ch;
-  margin: 1rem 0 0;
-  color: var(--muted);
-  font-size: 0.85rem;
+.research-stat-table .research-cell-text {
+  text-align: left;
+  white-space: nowrap;
 }
 
-.research-methodology-list,
-.research-privacy-list {
-  display: grid;
-  gap: 0.7rem;
-  margin: 0;
-}
-
-.research-methodology-list > div {
-  display: grid;
-  grid-template-columns: minmax(180px, 240px) 1fr;
-  gap: 0.5rem 1rem;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.research-methodology-list > div:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.research-methodology-list dt {
-  color: var(--primary);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.research-methodology-list dd {
-  margin: 0;
-  color: var(--text);
-  font-size: 0.88rem;
-  line-height: 1.5;
-}
-
-.research-privacy-list {
-  padding-left: 1.15rem;
-}
-
-.research-privacy-list li {
-  color: var(--text);
-  font-size: 0.88rem;
-  line-height: 1.5;
-}
-
-.research-export-panel button {
-  min-width: 170px;
-}
-
-.research-export-error {
-  margin-top: 1rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba(251, 113, 133, 0.4);
-  border-radius: 8px;
-  background: rgba(251, 113, 133, 0.08);
-  color: #fda4af;
-}
-
-/* Analytics Visualization V1 — filter and charts.
-   Deliberately restrained: the existing panel, table and token vocabulary is
-   reused rather than replaced, so a chart reads as part of the same page. */
-
-.research-filter-panel {
-  border-color: rgba(56, 189, 248, 0.22);
-}
-
-.research-filter {
-  display: grid;
-  gap: 0.6rem;
-  max-width: 34rem;
-}
-
-.research-filter-field {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.research-filter-field label {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-}
-
-.research-filter-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-/* Shown only while a new selection is in flight, so the figures still on screen
-   are never mistaken for the answer to the currently selected level. */
-.research-filter-pending {
-  margin: 0.2rem 0 0;
-  color: var(--primary);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-/* The select is a native control, so keyboard focus must be made visible the
-   same way it is for links and buttons. Scoped to this filter so no unrelated
-   page changes. */
-.research-filter-field select:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-.research-scope-line {
-  margin: 0.9rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
-.research-scope-line strong {
-  color: var(--primary);
-}
-
-/* Figures ---------------------------------------------------------------- */
+/* Charts ---------------------------------------------------------------- */
 
 .research-chart {
   margin: 0;
 }
 
 .research-chart-head {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
 }
 
 .research-chart-head h3 {
-  margin: 0 0 0.25rem;
-  font-size: 0.95rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.96rem;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -3823,29 +3934,24 @@ main.auth-main > form button {
 }
 
 .research-chart-note {
-  margin-top: 0.6rem;
+  margin-top: 0.65rem;
 }
 
-/* The SVG carries geometry only; exact figures live in the table beneath it.
-   A chart is never allowed to shrink below its natural width, because inside a
-   scaled viewBox a CSS font-size in px equals SVG user units and therefore
-   cannot stop text from shrinking with the drawing. Instead the plot is given a
-   floor and the surrounding container scrolls, mirroring the existing
-   .research-table-scroll behaviour used by the data tables.
-   The ceiling keeps the plot from ballooning on tablet widths, where an
-   uncapped fill would render 10-unit labels at roughly 19px and invert the
-   page's type hierarchy. */
+/* The SVG viewBox is generated at the measured container width, so its user
+   units stay close to CSS pixels. A readable minimum is kept and the wrapper
+   scrolls below that width rather than shrinking the labels. */
 .research-chart-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-bottom: 0.9rem;
+  overscroll-behavior-x: contain;
 }
 
 .research-chart-svg {
   display: block;
   width: 100%;
-  min-width: 340px;
-  max-width: 24rem;
+  min-width: 320px;
+  max-width: none;
   height: auto;
   overflow: visible;
 }
@@ -3863,7 +3969,7 @@ main.auth-main > form button {
   stroke: rgba(141, 162, 189, 0.6);
 }
 
-/* The placeholder behind an unavailable statistic. Never rendered at a value
+/* The placeholder for an unavailable statistic. Never rendered at a value
    height, so it can never be mistaken for a measured zero. */
 .research-chart-track {
   fill: rgba(141, 162, 189, 0.07);
@@ -3910,52 +4016,142 @@ main.auth-main > form button {
   font-style: italic;
 }
 
-/* Responsive ----------------------------------------------------------- */
+/* Methods and privacy --------------------------------------------------- */
 
-@media (max-width: 860px) {
-  .research-filter {
-    max-width: none;
-  }
+.research-methodology-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 1rem 0 0;
 }
 
-/* No width-specific override is needed. The min/max clamp above holds the
-   scale between 1.0x and about 1.13x at every viewport: narrow screens scroll
-   instead of shrinking text, and wide screens do not balloon it. An earlier
-   `max-width: none` override below 720px was removed because it defeated the
-   ceiling and reproduced the oversized-label problem on tablets. */
-
-.research-export-error p {
-  margin: 0 0 0.5rem;
+.research-methodology-list > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
 }
 
-.research-export-error p:last-child {
-  margin-bottom: 0;
+.research-methodology-list > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
-@media (max-width: 860px) {
-  .research-statistics-grid {
-    grid-template-columns: 1fr;
+.research-methodology-list dt {
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.research-methodology-list dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+.research-privacy-list {
+  display: grid;
+  gap: 0.55rem;
+  padding-left: 1.15rem;
+  margin: 0;
+}
+
+.research-privacy-list li {
+  color: var(--text);
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+/* Responsive ------------------------------------------------------------ */
+
+@media (min-width: 1000px) {
+  .research-methodology-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2.5rem;
   }
 
   .research-methodology-list > div {
+    grid-template-columns: minmax(120px, 150px) minmax(0, 1fr);
+  }
+
+  /* The last row in each of the two columns closes the list. */
+  .research-methodology-list > div:nth-last-child(2) {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+}
+
+@media (min-width: 1100px) {
+  .research-statistics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .research-stat-block + .research-stat-block {
+    margin-top: 0;
+    padding-top: 0;
+    padding-left: 2rem;
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
+
+  .research-stat-block:first-child {
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .research-toolbar {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .research-toolbar-export {
+    padding-top: 1rem;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .research-filter {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .research-filter-hint {
+    grid-column: 1;
+    margin-bottom: 0;
   }
 }
 
 @media (max-width: 720px) {
   .research-page {
-    width: min(100% - 1.25rem, 1120px);
+    width: min(100% - 1.25rem, 1180px);
   }
 
-  .research-cohort-grid {
+  .research-cohort-rail {
     grid-template-columns: 1fr;
   }
 
-  .research-export-panel button {
+  .research-cohort-scope {
+    max-width: none;
+  }
+
+  .research-methodology-list > div {
+    grid-template-columns: 1fr;
+  }
+
+  .research-toolbar-export button {
     width: 100%;
   }
 }
 
+/* IT Review responsive rules that were originally located after the research
+   block; preserved verbatim so the Research Analytics work does not regress
+   the IT Review route. */
 @media (max-width: 860px) {
   .review-action-grid {
     grid-template-columns: 1fr;
