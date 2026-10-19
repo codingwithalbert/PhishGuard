@@ -9,7 +9,9 @@ import PageHeader from "../components/PageHeader";
 import {
   getAwarenessQuestions,
   getLatestAwarenessAssessment,
-  submitAwarenessAssessment
+  safeProductError,
+  submitAwarenessAssessment,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
@@ -34,7 +36,7 @@ function isQuestionSet(questions) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -193,7 +195,7 @@ function AwarenessAssessment() {
       const data = await submitAwarenessAssessment(submittedAnswers);
 
       if (!data?.assessment) {
-        throw new Error("The assessment result could not be read.");
+        throw safeProductError("The assessment result could not be read.");
       }
 
       setLatestResult(data.assessment);

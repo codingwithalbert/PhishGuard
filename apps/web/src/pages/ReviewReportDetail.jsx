@@ -23,7 +23,9 @@ import {
   getAssignmentCandidates,
   getReviewReport,
   getReviewReportMessages,
+  safeProductError,
   startReviewReport,
+  toSafeErrorMessage,
   updateReviewReportPriority
 } from "../services/api";
 import {
@@ -52,7 +54,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -277,9 +279,7 @@ function ReviewReportDetailPage() {
     setMessages([]);
 
     if (!reportId) {
-      const missingIdError = new Error("Report ID is unavailable");
-
-      missingIdError.status = 404;
+      const missingIdError = safeProductError("Report ID is unavailable", 404);
       setError({
         message: missingIdError.message,
         status: missingIdError.status

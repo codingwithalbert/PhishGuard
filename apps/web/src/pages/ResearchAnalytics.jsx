@@ -1,19 +1,36 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
+import ExposureLevelFilter, {
+  ALL_EXPOSURE_LEVEL
+} from "../components/research/ExposureLevelFilter";
+import {
+  AssessmentScoreComparisonChart,
+  PearsonCorrelationChart,
+  TrainingExposureDistributionChart
+} from "../components/research/ResearchCharts";
+import {
+  describeMetricAvailability,
+  METRIC_AVAILABILITY
+} from "../components/research/researchChartUi";
 import {
   downloadResearchCsv,
-  getResearchAnalytics
+  getResearchAnalytics,
+  safeProductError,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
 const UNAVAILABLE_VALUE = "—";
+const EXPOSURE_FILTER_ID = "research-exposure-level";
 const REQUEST_ERROR_MESSAGE =
   "The research analytics could not be loaded. Please try again.";
 const EXPORT_ERROR_MESSAGE =
   "The research dataset could not be downloaded. Please try again.";
 const RESPONSE_FORMAT_ERROR_MESSAGE =
   "The research analytics response could not be read in the expected format.";
+const RESPONSE_MISMATCH_MESSAGE =
+  "The research analytics response did not describe the selected exposure level. Please try again.";
 
 const COHORT_FIELDS = [
   ["totalEligibleParticipants", "Eligible participants"],
@@ -33,20 +50,6 @@ const COHORT_FIELDS = [
   ]
 ];
 
-const RELATIONSHIP_FIELDS = [
-  [
-    "awarenessPhishingIdentification",
-    "Awareness Score and Phishing Identification Score"
-  ],
-  ["trainingExposureAwareness", "Training Exposure and Awareness Score"],
-  [
-    "trainingExposurePhishingIdentification",
-    "Training Exposure and Phishing Identification Score"
-  ]
-];
-
-// Rendered in a fixed order, using only the methodology text the backend
-// supplies. Unknown or missing keys are skipped instead of invented.
 const METHODOLOGY_FIELDS = [
   ["population", "Research population"],
   ["latestAttemptRule", "Assessment attempts"],
@@ -78,15 +81,6 @@ function isDescriptiveStatistics(statistics) {
   );
 }
 
-function isDistributionEntry(entry) {
-  return (
-    entry !== null &&
-    typeof entry === "object" &&
-    Number.isFinite(entry.trainingExposure) &&
-    isNonNegativeInteger(entry.count)
-  );
-}
-
 function isRelationship(relationship) {
   return (
     relationship !== null &&
@@ -98,6 +92,57 @@ function isRelationship(relationship) {
     isNonNegativeInteger(relationship.n) &&
     (relationship.r === null || Number.isFinite(relationship.r))
   );
+}
+
+// Analytics Visualization V1: the canonical Training Exposure levels come from
+// the backend and drive both the filter options and the distribution chart.
+// Requiring them to be strictly ascending guarantees the fixed category order
+// the charts depend on, rather than trusting response order implicitly.
+function isCanonicalExposureLevels(levels) {
+  return (
+    Array.isArray(levels) &&
+    levels.length > 0 &&
+    levels.every((level) => Number.isFinite(level)) &&
+    levels.every((level, index) => index === 0 || level > levels[index - 1])
+  );
+}
+
+/*
+ * The `filter` envelope is optional: the backend omits it when the parameter
+ * was not supplied, which is exactly the unfiltered default state. When it is
+ * present every value is validated before it is trusted, including the two
+ * reporting fields that exist only for a selected level.
+ */
+function isFilterEnvelope(envelope) {
+  if (envelope === undefined || envelope === null) {
+    return true;
+  }
+
+  if (typeof envelope !== "object" || Array.isArray(envelope)) {
+    return false;
+  }
+
+  if (
+    typeof envelope.exposureLevel !== "string" ||
+    typeof envelope.label !== "string" ||
+    envelope.label.length === 0 ||
+    typeof envelope.applied !== "boolean" ||
+    typeof envelope.scope !== "string" ||
+    envelope.scope.length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    envelope.applied &&
+    (typeof envelope.statisticsSuppressed !== "boolean" ||
+      !Number.isInteger(envelope.minimumStatisticN) ||
+      envelope.minimumStatisticN < 1)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function isResearchAnalyticsResponse(data) {
@@ -126,7 +171,13 @@ function isResearchAnalyticsResponse(data) {
 
   if (
     !Array.isArray(data.trainingExposureDistribution) ||
-    !data.trainingExposureDistribution.every(isDistributionEntry)
+    !data.trainingExposureDistribution.every(
+      (entry) =>
+        entry !== null &&
+        typeof entry === "object" &&
+        Number.isFinite(entry.trainingExposure) &&
+        isNonNegativeInteger(entry.count)
+    )
   ) {
     return false;
   }
@@ -134,18 +185,33 @@ function isResearchAnalyticsResponse(data) {
   if (
     data.relationships === null ||
     typeof data.relationships !== "object" ||
-    !RELATIONSHIP_FIELDS.every(([field]) =>
-      isRelationship(data.relationships[field])
-    )
+    !Object.values(data.relationships).every(isRelationship)
+  ) {
+    return false;
+  }
+
+  if (
+    data.methodology === null ||
+    typeof data.methodology !== "object" ||
+    Array.isArray(data.methodology)
   ) {
     return false;
   }
 
   return (
-    data.methodology !== null &&
-    typeof data.methodology === "object" &&
-    !Array.isArray(data.methodology)
+    isCanonicalExposureLevels(data.methodology.trainingExposureLevels) &&
+    isFilterEnvelope(data.filter)
   );
+}
+
+// The level a response actually describes, derived from the validated
+// envelope. An absent envelope means the unfiltered cohort.
+function getDescribedLevel(data) {
+  if (data?.filter?.applied === true) {
+    return data.filter.exposureLevel;
+  }
+
+  return ALL_EXPOSURE_LEVEL;
 }
 
 function isSessionError(error) {
@@ -154,7 +220,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -204,7 +270,34 @@ function ResearchErrorState({ error, onRetry }) {
   );
 }
 
-function StatisticTable({ title, description, statistics, labelledBy }) {
+/*
+ * Suppression is reported here exactly as the charts report it. The previous
+ * behaviour rendered every null as a dash, which made a deliberately withheld
+ * statistic indistinguishable from one that was simply never available.
+ * `n` is always shown, and the reason is stated once beneath the table rather
+ * than repeated in every cell.
+ */
+function StatisticTable({
+  title,
+  description,
+  statistics,
+  labelledBy,
+  context
+}) {
+  const availability = describeMetricAvailability(statistics, context ?? {});
+
+  function renderValue(value) {
+    if (availability.state === METRIC_AVAILABILITY.suppressed) {
+      return "Suppressed";
+    }
+
+    if (availability.state === METRIC_AVAILABILITY.noObservations) {
+      return "Not available";
+    }
+
+    return formatValue(value);
+  }
+
   return (
     <section
       className="research-panel"
@@ -230,73 +323,135 @@ function StatisticTable({ title, description, statistics, labelledBy }) {
           </tr>
           <tr>
             <th scope="row">Mean</th>
-            <td>{formatValue(statistics.mean)}</td>
+            <td>{renderValue(statistics.mean)}</td>
           </tr>
           <tr>
             <th scope="row">Median</th>
-            <td>{formatValue(statistics.median)}</td>
+            <td>{renderValue(statistics.median)}</td>
           </tr>
           <tr>
             <th scope="row">Minimum</th>
-            <td>{formatValue(statistics.min)}</td>
+            <td>{renderValue(statistics.min)}</td>
           </tr>
           <tr>
             <th scope="row">Maximum</th>
-            <td>{formatValue(statistics.max)}</td>
+            <td>{renderValue(statistics.max)}</td>
           </tr>
         </tbody>
       </table>
 
-      <p className="research-boundary-note">
-        A dash means the backend reported no available observations for this
-        statistic. Missing data is never shown as zero.
-      </p>
+      {availability.state === METRIC_AVAILABILITY.suppressed ? (
+        <p className="research-boundary-note">
+          Suppressed — below minimum reporting size. This cohort has{" "}
+          {statistics.n} valid observation{statistics.n === 1 ? "" : "s"},
+          which is fewer than the minimum reporting size for a selected exposure
+          level, so the values above are withheld. They are never shown as zero.
+        </p>
+      ) : availability.state === METRIC_AVAILABILITY.noObservations ? (
+        <p className="research-boundary-note">
+          Not available — no observations. No participant in this cohort has a
+          recorded result for this assessment. Missing data is never shown as
+          zero.
+        </p>
+      ) : (
+        <p className="research-boundary-note">
+          A dash means the backend reported no available observations for this
+          statistic. Missing data is never shown as zero.
+        </p>
+      )}
     </section>
   );
 }
 
 function ResearchAnalyticsPage() {
-
   const [analytics, setAnalytics] = useState(null);
+  const [selectedLevel, setSelectedLevel] = useState(ALL_EXPOSURE_LEVEL);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(null);
 
-  const loadAnalytics = useCallback(async () => {
+  // Stale-response protection. Every request takes a monotonically increasing
+  // id, and a response is applied only when its id is still the newest. The
+  // previous request is also aborted so a rapid filter change cannot leave an
+  // earlier payload in flight long enough to overwrite a later selection.
+  const latestRequestRef = useRef(0);
+  const abortRef = useRef(null);
+
+  const loadAnalytics = useCallback(async (level) => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
+
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
+    const controller =
+      typeof AbortController === "function" ? new AbortController() : null;
+
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
 
     try {
-      const data = await getResearchAnalytics();
+      const data = await getResearchAnalytics({
+        exposureLevel: level,
+        signal: controller?.signal
+      });
+
+      // A newer filter change has already been issued; discard this payload.
+      if (latestRequestRef.current !== requestId) {
+        return;
+      }
 
       if (!isResearchAnalyticsResponse(data)) {
-        const formatError = new Error(
-          RESPONSE_FORMAT_ERROR_MESSAGE
-        );
+        throw safeProductError(RESPONSE_FORMAT_ERROR_MESSAGE, 500);
+      }
 
-        formatError.status = 500;
-        throw formatError;
+      // Defence in depth against a mislabelled response: the payload must
+      // describe the level that was requested.
+      if (getDescribedLevel(data) !== level) {
+        throw safeProductError(RESPONSE_MISMATCH_MESSAGE, 500);
       }
 
       setAnalytics(data);
     } catch (requestError) {
+      if (latestRequestRef.current !== requestId) {
+        return;
+      }
+
+      // An aborted request was superseded deliberately and is not a failure.
+      if (requestError?.name === "AbortError") {
+        return;
+      }
+
       setAnalytics(null);
-      setError(
-        getErrorDetails(requestError, REQUEST_ERROR_MESSAGE)
-      );
+      setError(getErrorDetails(requestError, REQUEST_ERROR_MESSAGE));
     } finally {
-      setLoading(false);
+      if (latestRequestRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     async function loadOnMount() {
-      await loadAnalytics();
+      await loadAnalytics(selectedLevel);
     }
 
     loadOnMount();
-  }, [loadAnalytics]);
+
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, [loadAnalytics, selectedLevel]);
+
+  function handleLevelChange(level) {
+    setSelectedLevel(level);
+  }
 
   async function handleExport() {
     // Prevents repeated export actions while a download is in progress.
@@ -320,6 +475,18 @@ function ResearchAnalyticsPage() {
 
   const cohort = analytics?.cohort;
   const hasNoParticipants = cohort?.totalEligibleParticipants === 0;
+  const isFiltered =
+    analytics !== null &&
+    getDescribedLevel(analytics) !== ALL_EXPOSURE_LEVEL;
+  const filterApplied =
+    analytics?.filter?.applied === true &&
+    isNonNegativeInteger(analytics?.filter?.minimumStatisticN);
+  // Suppression metadata is only meaningful for a selected level. Absent
+  // metadata is treated as "no minimum declared", never as a suppression.
+  const minimumStatisticN = filterApplied
+    ? analytics.filter.minimumStatisticN
+    : null;
+
   // Only assessment results can be missing. Training Exposure is defined for
   // every eligible participant, so 0% is a valid value and not missing data.
   const isPartiallyPopulated =
@@ -329,6 +496,15 @@ function ResearchAnalyticsPage() {
       cohort.totalEligibleParticipants ||
       cohort.participantsWithPhishingIdentification <
         cohort.totalEligibleParticipants);
+
+  const cohortScopeLabel = isFiltered
+    ? analytics.filter.label
+    : "All eligible participants";
+
+  const chartContext = {
+    filterApplied: isFiltered,
+    minimumStatisticN
+  };
 
   return (
     <main
@@ -359,19 +535,54 @@ function ResearchAnalyticsPage() {
         }
       />
 
+      <section
+        className="research-panel research-filter-panel"
+        aria-labelledby="research-filter-heading"
+        aria-busy={loading}
+      >
+        <h2 id="research-filter-heading">Filter</h2>
+        <p className="research-panel-note">
+          Scope every count, chart and statistic below to one Training Exposure
+          level. The filter is applied on the server before any aggregate is
+          computed.
+        </p>
+
+        <ExposureLevelFilter
+          id={EXPOSURE_FILTER_ID}
+          levels={analytics?.methodology?.trainingExposureLevels ?? []}
+          selectedLevel={selectedLevel}
+          onChange={handleLevelChange}
+          available={analytics !== null}
+          loading={loading}
+          stale={loading && analytics !== null}
+          cohortSize={cohort?.totalEligibleParticipants ?? 0}
+        />
+
+        <p className="research-scope-line" aria-live="polite">
+          Current scope: <strong>{cohortScopeLabel}</strong>
+        </p>
+      </section>
+
       {loading ? (
         <ResearchLoadingState />
       ) : error ? (
-        <ResearchErrorState error={error} onRetry={loadAnalytics} />
+        <ResearchErrorState
+          error={error}
+          onRetry={() => loadAnalytics(selectedLevel)}
+        />
       ) : analytics ? (
         <>
           {hasNoParticipants && (
             <section className="research-panel research-empty-state">
-              <h2>No eligible participants yet</h2>
+              <h2>
+                {isFiltered
+                  ? "No participants in this exposure cohort"
+                  : "No eligible participants yet"}
+              </h2>
               <p>
-                The research population is currently empty, so no statistics
-                can be calculated. This is a valid state, not an error. Values
-                will appear once active user accounts exist.
+                {isFiltered
+                  ? "No eligible account currently has this Training Exposure level, so no statistic can be calculated for it. This is a valid state, not an error. Choose another level or return to the whole cohort."
+                  : "The research population is currently empty, so no statistics can be calculated. This is a valid state, not an error. Values will appear once active user accounts exist."}
               </p>
             </section>
           )}
@@ -404,6 +615,10 @@ function ResearchAnalyticsPage() {
               Eligible participants are active accounts with the user role.
               Staff, admin, and inactive accounts are excluded.
             </p>
+            <p className="research-scope-line">
+              Within selected exposure cohort:{" "}
+              <strong>{cohortScopeLabel}</strong>
+            </p>
 
             <dl className="research-cohort-grid">
               {COHORT_FIELDS.map(([field, label]) => (
@@ -413,6 +628,17 @@ function ResearchAnalyticsPage() {
                 </div>
               ))}
             </dl>
+
+            {isFiltered && (
+              <p className="research-boundary-note">
+                Within a selected exposure cohort these two counts describe the
+                selected level rather than the whole cohort, so they are
+                determined by the filter: participants with Training Exposure
+                above 0% is 0 at the 0% level and the cohort size at every other
+                level, and participants with 100% Training Exposure is 0 at
+                every level except 100%, where it is the cohort size.
+              </p>
+            )}
           </section>
 
           <div className="research-statistics-grid">
@@ -420,8 +646,9 @@ function ResearchAnalyticsPage() {
               <StatisticTable
                 labelledBy="research-awareness-heading"
                 title="Awareness Score"
-                description="Descriptive statistics for the latest completed Awareness Assessment of each eligible participant."
+                description={`Descriptive statistics for the latest completed Awareness Assessment of each participant in ${cohortScopeLabel}.`}
                 statistics={analytics.awareness}
+                context={chartContext}
               />
             </div>
 
@@ -429,105 +656,30 @@ function ResearchAnalyticsPage() {
               <StatisticTable
                 labelledBy="research-phishing-heading"
                 title="Phishing Identification Score"
-                description="Descriptive statistics for the latest completed Phishing Identification Assessment of each eligible participant."
+                description={`Descriptive statistics for the latest completed Phishing Identification Assessment of each participant in ${cohortScopeLabel}.`}
                 statistics={analytics.phishingIdentification}
+                context={chartContext}
               />
             </div>
           </div>
 
-          <section
-            className="research-panel"
-            aria-labelledby="research-training-heading"
-          >
-            <h2 id="research-training-heading">
-              Training Exposure distribution
-            </h2>
-            <p className="research-panel-note">
-              Participant counts per Training Exposure level, exactly as
-              returned by the backend. Training Exposure reflects recorded
-              completion of the three fixed training modules and does not
-              indicate assessed performance.
-            </p>
+          <TrainingExposureDistributionChart
+            levels={analytics.methodology.trainingExposureLevels}
+            distribution={analytics.trainingExposureDistribution}
+            cohortSize={cohort.totalEligibleParticipants}
+            withinSelectedCohort={isFiltered}
+          />
 
-            <div className="research-table-scroll">
-              <table className="research-stat-table">
-                <caption className="research-table-caption">
-                  Training Exposure levels and participant counts
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Training Exposure</th>
-                    <th scope="col">Participants</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analytics.trainingExposureDistribution.map((entry) => (
-                    <tr key={entry.trainingExposure}>
-                      <th scope="row">
-                        {entry.trainingExposure}%
-                      </th>
-                      <td>{entry.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <AssessmentScoreComparisonChart
+            awareness={analytics.awareness}
+            phishingIdentification={analytics.phishingIdentification}
+            context={chartContext}
+          />
 
-          <section
-            className="research-panel"
-            aria-labelledby="research-relationships-heading"
-          >
-            <h2 id="research-relationships-heading">
-              Observed relationships
-            </h2>
-            <p className="research-panel-note">
-              Pearson correlation coefficients for the available participant
-              measurements. Each relationship uses only participants who have
-              values for both variables.
-            </p>
-
-            <div className="research-table-scroll">
-              <table className="research-stat-table">
-                <caption className="research-table-caption">
-                  Pairwise Pearson correlation values
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Variables compared</th>
-                    <th scope="col">n</th>
-                    <th scope="col">Pearson r</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {RELATIONSHIP_FIELDS.map(([field, label]) => {
-                    const relationship = analytics.relationships[field];
-
-                    return (
-                      <tr key={field}>
-                        <th scope="row">{label}</th>
-                        <td>{relationship.n}</td>
-                        <td>
-                          {relationship.r === null
-                            ? UNAVAILABLE_VALUE
-                            : relationship.r}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <p className="research-boundary-note">
-              A dash means the backend could not calculate the coefficient for
-              the available data, for example with fewer than two paired
-              observations or no variation in one of the variables. The values
-              describe associations only; they are not a measure of strength,
-              significance, or causation, and this page does not rank or judge
-              participants.
-            </p>
-          </section>
+          <PearsonCorrelationChart
+            relationships={analytics.relationships}
+            context={chartContext}
+          />
 
           <section
             className="research-panel"
@@ -587,14 +739,23 @@ function ResearchAnalyticsPage() {
               <li>
                 The CSV export uses pseudonymous participant identifiers.
                 Participants appear only as transient research-dataset
-                identifiers that are generated for the export, are not permanent
-                account identifiers, and are not authentication identifiers.
+                identifiers that are generated for the export, are not
+                permanent account identifiers, and are not authentication
+                identifiers.
               </li>
               <li>
                 Removing direct identifiers does not remove the research value
                 of the export. Handle the downloaded file as research data,
                 store it only where research data is permitted, and do not
                 attempt to re-identify participants.
+              </li>
+              <li>
+                A selected exposure cohort can be small. Where the backend
+                withholds a statistic because too few valid observations are
+                available, this page shows the reason instead of the value and
+                never substitutes zero. That safeguard limits what is displayed;
+                it is not a guarantee that no inference is possible from the
+                figures that remain.
               </li>
             </ul>
           </section>
@@ -606,8 +767,9 @@ function ResearchAnalyticsPage() {
             <h2 id="research-export-heading">Dataset export</h2>
             <p className="research-panel-note">
               Download the pseudonymous participant-level research dataset as
-              CSV. The file is generated by the backend; this page never builds
-              participant rows itself.
+              CSV. The file is generated by the backend and always contains the
+              whole eligible cohort; the filter above does not change it. This
+              page never builds participant rows itself.
             </p>
 
             <button

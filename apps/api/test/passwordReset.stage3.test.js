@@ -100,13 +100,15 @@ app.use(express.json({ limit: "1mb" }));
 
 // Mounted first so /reset-password and /forgot-password use the injected
 // service and workflow; the real auth router below still serves every
-// existing auth route.
+// existing auth route. Persistent audit recording is faked so a handled
+// outcome never attempts a database write.
 app.use(
   "/api/auth",
   createPasswordResetRouter({
     service,
     forgotPasswordWorkflow,
-    forgotPasswordRateLimiter: passThroughLimiter
+    forgotPasswordRateLimiter: passThroughLimiter,
+    recordAuditEvent: async () => null
   })
 );
 app.use("/api/auth", authRoutes);

@@ -3737,6 +3737,193 @@ main.auth-main > form button {
   color: #fda4af;
 }
 
+/* Analytics Visualization V1 — filter and charts.
+   Deliberately restrained: the existing panel, table and token vocabulary is
+   reused rather than replaced, so a chart reads as part of the same page. */
+
+.research-filter-panel {
+  border-color: rgba(56, 189, 248, 0.22);
+}
+
+.research-filter {
+  display: grid;
+  gap: 0.6rem;
+  max-width: 34rem;
+}
+
+.research-filter-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.research-filter-field label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.research-filter-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* Shown only while a new selection is in flight, so the figures still on screen
+   are never mistaken for the answer to the currently selected level. */
+.research-filter-pending {
+  margin: 0.2rem 0 0;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* The select is a native control, so keyboard focus must be made visible the
+   same way it is for links and buttons. Scoped to this filter so no unrelated
+   page changes. */
+.research-filter-field select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.research-scope-line {
+  margin: 0.9rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.research-scope-line strong {
+  color: var(--primary);
+}
+
+/* Figures ---------------------------------------------------------------- */
+
+.research-chart {
+  margin: 0;
+}
+
+.research-chart-head {
+  margin-bottom: 0.75rem;
+}
+
+.research-chart-head h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.research-chart-subtitle,
+.research-chart-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.research-chart-note {
+  margin-top: 0.6rem;
+}
+
+/* The SVG carries geometry only; exact figures live in the table beneath it.
+   A chart is never allowed to shrink below its natural width, because inside a
+   scaled viewBox a CSS font-size in px equals SVG user units and therefore
+   cannot stop text from shrinking with the drawing. Instead the plot is given a
+   floor and the surrounding container scrolls, mirroring the existing
+   .research-table-scroll behaviour used by the data tables.
+   The ceiling keeps the plot from ballooning on tablet widths, where an
+   uncapped fill would render 10-unit labels at roughly 19px and invert the
+   page's type hierarchy. */
+.research-chart-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 0.9rem;
+}
+
+.research-chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 340px;
+  max-width: 24rem;
+  height: auto;
+  overflow: visible;
+}
+
+.research-chart-bar {
+  fill: rgba(56, 189, 248, 0.55);
+  stroke: rgba(56, 189, 248, 0.9);
+  stroke-width: 1;
+}
+
+/* An empty category is still drawn, as a baseline tick, so "no participants"
+   reads as a present-but-zero category rather than a missing one. */
+.research-chart-bar-empty {
+  fill: rgba(141, 162, 189, 0.35);
+  stroke: rgba(141, 162, 189, 0.6);
+}
+
+/* The placeholder behind an unavailable statistic. Never rendered at a value
+   height, so it can never be mistaken for a measured zero. */
+.research-chart-track {
+  fill: rgba(141, 162, 189, 0.07);
+  stroke: rgba(141, 162, 189, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.research-chart-axis {
+  stroke: rgba(141, 162, 189, 0.55);
+  stroke-width: 1;
+}
+
+.research-chart-grid {
+  stroke: rgba(141, 162, 189, 0.22);
+  stroke-width: 1;
+}
+
+.research-chart-zero {
+  stroke: rgba(203, 213, 225, 0.5);
+  stroke-width: 1;
+}
+
+.research-chart-value {
+  fill: var(--text-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.research-chart-tick,
+.research-chart-row-label {
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.research-chart-row-label {
+  letter-spacing: 0.01em;
+}
+
+/* Reasons are styled in the muted tone with a leading marker rather than in a
+   status colour, so meaning never depends on hue alone. */
+.research-chart-reason {
+  fill: var(--muted);
+  font-style: italic;
+}
+
+/* Responsive ----------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .research-filter {
+    max-width: none;
+  }
+}
+
+/* No width-specific override is needed. The min/max clamp above holds the
+   scale between 1.0x and about 1.13x at every viewport: narrow screens scroll
+   instead of shrinking text, and wide screens do not balloon it. An earlier
+   `max-width: none` override below 720px was removed because it defeated the
+   ceiling and reproduced the oversized-label problem on tablets. */
+
 .research-export-error p {
   margin: 0 0 0.5rem;
 }

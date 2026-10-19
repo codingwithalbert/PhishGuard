@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
-import { registerUser } from "../services/api";
+import { registerUser, toSafeErrorMessage } from "../services/api";
+
+const REGISTRATION_ERROR_MESSAGE =
+  "Registration could not be completed. Please try again.";
 
 function Register() {
   const navigate = useNavigate();
@@ -45,7 +48,7 @@ function Register() {
         navigate("/login");
       }, 1000);
     } catch (err) {
-      setError(err.message);
+      setError(toSafeErrorMessage(err, REGISTRATION_ERROR_MESSAGE));
     } finally {
       setLoading(false);
     }

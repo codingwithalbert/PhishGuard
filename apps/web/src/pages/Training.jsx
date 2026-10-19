@@ -10,7 +10,9 @@ import useEntranceMotion from "../hooks/useEntranceMotion";
 import {
   completeTrainingModule,
   getTrainingModules,
-  getTrainingProgress
+  getTrainingProgress,
+  safeProductError,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
 
@@ -65,7 +67,7 @@ function isCompletionResponse(response) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -212,7 +214,7 @@ function TrainingPage() {
         !isCompletionResponse(data) ||
         data.completion.moduleId !== module.moduleId
       ) {
-        throw new Error("The training completion response could not be read.");
+        throw safeProductError("The training completion response could not be read.");
       }
 
       setModules((currentModules) =>

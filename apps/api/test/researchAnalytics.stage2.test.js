@@ -479,8 +479,12 @@ test("service failures are handled by the existing error handling", async () => 
 test("the research router mounts authentication and admin authorization first", () => {
   const { authenticate } = require("../src/middleware/auth.middleware");
   const { authorizeRoles } = require("../src/middleware/role.middleware");
+  const {
+    validateAnalyticsQuery
+  } = require("../src/middleware/research.validate.middleware");
 
-  const router = createResearchRouter(createResearchController());
+  const routeController = createResearchController();
+  const router = createResearchRouter(routeController);
   const routes = router.stack
     .filter((layer) => layer.route)
     .map((layer) => ({
@@ -531,10 +535,24 @@ test("the research router mounts authentication and admin authorization first", 
   assert.equal(runLayer(sharedLayers[1], { role: "staff" }).response.status, 403);
   assert.equal(runLayer(sharedLayers[1], null).response.status, 401);
 
-  // The shared authorization layer runs before any route handler.
-  for (const route of routes) {
-    assert.equal(route.handlers.length, 1);
-  }
+  // Analytics Visualization V1: query validation is mounted per route, never as
+  // a shared layer, so it cannot run before authorization and cannot affect the
+  // CSV export route.
+  assert.equal(sharedLayers.length, 2);
+
+  const analyticsRoute = routes.find((route) => route.path === "/analytics");
+  const csvRoute = routes.find((route) => route.path === "/export.csv");
+
+  assert.equal(analyticsRoute.handlers.length, 2);
+  assert.equal(analyticsRoute.handlers[0], validateAnalyticsQuery);
+  assert.equal(
+    analyticsRoute.handlers[1],
+    routeController.getAnalytics
+  );
+
+  // The CSV export route is deliberately unchanged: one handler, no validator.
+  assert.equal(csvRoute.handlers.length, 1);
+  assert.notEqual(csvRoute.handlers[0], validateAnalyticsQuery);
 });
 
 test("CSV serialization escapes fields and keeps zero values", () => {

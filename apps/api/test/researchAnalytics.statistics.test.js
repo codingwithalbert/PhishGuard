@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  CORRELATION_PRECISION,
   computeDescriptiveStatistics,
   computeMedian,
   computePearsonCorrelation,
@@ -241,6 +242,135 @@ test("Pearson correlation is null for zero variance", () => {
       [7, 7]
     ]),
     { n: 2, r: null }
+  );
+});
+
+test("Pearson correlation is null when a variable is constant at every canonical exposure value", () => {
+  // These are the four canonical Training Exposure percentages. 0 and 100 are
+  // exactly representable in binary, so they were already correct. 33.33 and
+  // 66.67 are not, and before the exact constancy check they produced a
+  // floating-point variance residue of about 3e-28 that let the denominator
+  // check slip through and produced a fabricated 0 from about n = 6 upward.
+  for (const exposure of [0, 33.33, 66.67, 100]) {
+    for (const size of [2, 3, 5, 6, 7, 8, 10, 25]) {
+      const constantExposure = [];
+
+      for (let index = 0; index < size; index += 1) {
+        constantExposure.push([exposure, 40 + index * 5]);
+      }
+
+      assert.deepEqual(
+        computePearsonCorrelation(constantExposure),
+        { n: size, r: null },
+        `constant exposure ${exposure} at n=${size}`
+      );
+    }
+  }
+});
+
+test("Pearson correlation is null when awareness or identification scores are constant", () => {
+  // Constant Y, varying X.
+  for (const score of [0, 33.33, 66.67, 100]) {
+    for (const size of [3, 6, 10]) {
+      const constantScore = [];
+
+      for (let index = 0; index < size; index += 1) {
+        constantScore.push([10 + index * 7, score]);
+      }
+
+      assert.deepEqual(
+        computePearsonCorrelation(constantScore),
+        { n: size, r: null },
+        `constant score ${score} at n=${size}`
+      );
+    }
+  }
+
+  // Both variables constant.
+  assert.deepEqual(
+    computePearsonCorrelation([
+      [33.33, 80],
+      [33.33, 80],
+      [33.33, 80],
+      [33.33, 80]
+    ]),
+    { n: 4, r: null }
+  );
+
+  // Constant awareness against the canonical exposure levels, the exact shape
+  // the analytics layer produces when a Training Exposure level is selected.
+  assert.deepEqual(
+    computePearsonCorrelation([
+      [33.33, 60],
+      [33.33, 60],
+      [33.33, 60],
+      [33.33, 60],
+      [33.33, 60],
+      [33.33, 60]
+    ]),
+    { n: 6, r: null }
+  );
+});
+
+test("the exact constancy check does not alter nonconstant correlations", () => {
+  const increasing = [
+    [1, 2],
+    [2, 4],
+    [3, 6],
+    [4, 8],
+    [5, 10],
+    [6, 12]
+  ];
+
+  const decreasing = [
+    [1, 10],
+    [2, 8],
+    [3, 6],
+    [4, 4],
+    [5, 2],
+    [6, 0]
+  ];
+
+  const scattered = [
+    [1, 3],
+    [2, 8],
+    [3, 5],
+    [4, 9],
+    [5, 1],
+    [6, 7]
+  ];
+
+  // Perfect positive and perfect negative relationships stay exactly +/-1.
+  assert.deepEqual(computePearsonCorrelation(increasing), { n: 6, r: 1 });
+  assert.deepEqual(computePearsonCorrelation(decreasing), { n: 6, r: -1 });
+
+  // A genuine partial relationship is still reported, not nulled.
+  const scatteredResult = computePearsonCorrelation(scattered);
+
+  assert.equal(scatteredResult.n, 6);
+  assert.equal(typeof scatteredResult.r, "number");
+  assert.ok(scatteredResult.r > 0 && scatteredResult.r < 1);
+
+  // Near-constant values that are NOT identical remain computable.
+  const almostConstant = [
+    [33.33, 50],
+    [33.34, 55],
+    [33.32, 60],
+    [33.35, 65],
+    [33.31, 70],
+    [33.36, 75]
+  ];
+
+  const almostConstantResult = computePearsonCorrelation(almostConstant);
+
+  assert.equal(almostConstantResult.n, 6);
+  assert.equal(typeof almostConstantResult.r, "number");
+
+  // Rounding precision is unchanged: three decimal places.
+  assert.equal(CORRELATION_PRECISION, 3);
+  assert.equal(
+    almostConstantResult.r,
+    roundTo(almostConstantResult.r, CORRELATION_PRECISION)
   );
 });
 

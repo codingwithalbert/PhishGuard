@@ -2,6 +2,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const mongoose = require("mongoose");
 const analysisRoutes = require("./routes/analysis.routes");
 const authRoutes = require("./routes/auth.routes");
 const awarenessRoutes = require("./routes/awareness.routes");
@@ -28,6 +29,35 @@ const errorHandler = require("./middleware/error.middleware");
 
 const DEFAULT_CLIENT_URL = "http://localhost:5173";
 const JSON_BODY_LIMIT = "1mb";
+
+// Coarse database readiness, mapped from the Mongoose connection state through a
+// CLOSED set of words.
+//
+// `readyState` is an integer; the driver's own string for it is deliberately not
+// used, so no driver-supplied text can reach a response unfiltered. Only these
+// four words are ever published: no host, port, URI, credential, driver version,
+// or connection diagnostic is exposed.
+function describeDatabaseReadiness(readyState) {
+  const states = mongoose.Connection.STATES;
+
+  if (readyState === states.connected) {
+    return { ready: true, state: "connected" };
+  }
+
+  if (readyState === states.connecting) {
+    return { ready: false, state: "connecting" };
+  }
+
+  if (readyState === states.disconnecting) {
+    return { ready: false, state: "disconnecting" };
+  }
+
+  if (readyState === states.disconnected) {
+    return { ready: false, state: "disconnected" };
+  }
+
+  return { ready: false, state: "unavailable" };
+}
 
 function createApp() {
   const app = express();
@@ -68,11 +98,36 @@ function createApp() {
     });
   });
 
+  // Readiness is deliberately a SEPARATE route from liveness.
+  //
+  // `/api/health` answers "is this process sane" and always returns 200 while
+  // the process is up. It must never fail because the database is briefly
+  // unavailable: a platform that restarts an unhealthy container turns a
+  // transient database blip into a restart loop, which is worse than the outage
+  // that caused it.
+  //
+  // `/api/ready` answers "should traffic be routed here", and is the endpoint a
+  // load balancer or platform should probe for traffic eligibility.
+  app.get("/api/ready", (req, res) => {
+    // Never cached: readiness is a live signal, and a cached 200 would keep a
+    // stopped instance in rotation.
+    res.set("Cache-Control", "no-store");
+
+    const state = describeDatabaseReadiness(mongoose.connection.readyState);
+
+    return res.status(state.ready ? 200 : 503).json({
+      status: state.ready ? "ready" : "not_ready",
+      service: "phishguard-api",
+      database: state.state
+    });
+  });
+
   app.use(errorHandler);
 
   return app;
 }
 
 module.exports = {
-  createApp
+  createApp,
+  describeDatabaseReadiness
 };

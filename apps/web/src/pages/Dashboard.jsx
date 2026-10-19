@@ -15,9 +15,18 @@ import {
   deleteAnalysis,
   getAnalyses,
   getDashboardSummary,
-  getOwnReports
+  getOwnReports,
+  safeProductError,
+  toSafeErrorMessage
 } from "../services/api";
 import { isInvalidSessionError } from "../services/session";
+
+const HISTORY_ERROR_MESSAGE =
+  "The analysis history could not be loaded. Please try again.";
+const ANALYZE_ERROR_MESSAGE =
+  "The URL could not be analyzed. Please try again.";
+const DELETE_ERROR_MESSAGE =
+  "The analysis could not be deleted. Please try again.";
 
 function isSessionError(error) {
   return isInvalidSessionError(error);
@@ -25,7 +34,7 @@ function isSessionError(error) {
 
 function getErrorDetails(error, fallback) {
   return {
-    message: error?.message || fallback,
+    message: toSafeErrorMessage(error, fallback),
     status: error?.status
   };
 }
@@ -173,9 +182,7 @@ function Dashboard() {
       const data = await getDashboardSummary();
 
       if (!isDashboardSummary(data)) {
-        throw new Error(
-          "The dashboard summary could not be read in the expected format."
-        );
+        throw safeProductError("The dashboard summary could not be read in the expected format.");
       }
 
       setSummary(data);
@@ -205,7 +212,7 @@ function Dashboard() {
         const data = await getAnalyses();
         setAnalyses(data.analyses);
       } catch (err) {
-        setError(err.message);
+        setError(toSafeErrorMessage(err, HISTORY_ERROR_MESSAGE));
       } finally {
         setHistoryLoading(false);
       }
@@ -251,7 +258,7 @@ function Dashboard() {
       setUrl("");
       setMessage("URL analyzed successfully.");
     } catch (err) {
-      setError(err.message);
+      setError(toSafeErrorMessage(err, ANALYZE_ERROR_MESSAGE));
     } finally {
       setLoading(false);
     }
@@ -285,7 +292,7 @@ function Dashboard() {
 
       setMessage("Analysis deleted successfully.");
     } catch (err) {
-      setError(err.message);
+      setError(toSafeErrorMessage(err, DELETE_ERROR_MESSAGE));
     }
   }
 
