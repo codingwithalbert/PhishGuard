@@ -5,6 +5,8 @@
 **Specification date:** 2026-10-17 · **Status reconciled:** 2026-10-17  
 **Source of the technical revisions below:** OpenCode read-only review of `specs/analytics-visualization-v1.md` (12 revisions, four blocking). Those revisions are unchanged.
 
+**Presentation amendment:** 2026-10-19 — see section 11 (presentation only; no technical requirement changed).
+
 ## Status reconciliation (2026-10-17)
 
 The earlier status line on this document read "REVIEW CANDIDATE — NO
@@ -208,3 +210,79 @@ The eight steps above are unchanged requirements. Their actual completion state:
 - R12: Explicit Express 5 duplicate, blank, bracket, unknown-key cases.
 
 **Status: implemented for synthetic-data demonstration; uncommitted; browser and assistive-technology verification outstanding; institutional privacy approval not obtained.** The twelve revisions above are unchanged, as are all technical requirements in sections 1–8. This document authorizes no new functionality.
+
+## 11. Presentation amendment — "Evidence Desk" refresh (2026-10-19)
+
+**Authorized by:** the PhishGuard V2 redesign task (blueprint Section 10, Phase 1,
+scoped to Research Analytics only).
+
+**Nature: presentation only.** No statistical definition, endpoint, request or
+response contract, query-validation rule, filter semantic, cohort rule,
+assessment-selection rule, Training Exposure semantic, missing-value rule,
+suppression rule, unfiltered default, stale-response behaviour, or CSV-export
+scope is changed. Sections 1–10 above remain the governing contract, including
+every technical requirement in sections 3–6 and the chart requirements in
+section 6. This is a re-presentation of the same server-computed values.
+
+### 11.1 What changed (presentation)
+
+- The filter select and the CSV export button are consolidated into one compact
+  toolbar component (`ResearchToolbar.jsx`). The filter control and its
+  behaviour are unchanged (`ExposureLevelFilter.jsx`; only its hint sentence was
+  shortened). Export still requests the unfiltered `/api/research/export.csv`
+  and remains independent of the on-screen filter (section 2, section 8).
+- The page header was condensed to a short title/description plus one context
+  line ("Admin only · De-identified aggregate view · Associations are not
+  causal · Methods and limitations") carrying an in-page anchor to the
+  methodology section.
+- The cohort summary is a denser metric rail; the descriptive-statistics tables
+  keep their exact content, scope label, and suppression wording.
+- Methodology and privacy content moved into quieter reading panels; the
+  methodology definition list is two-column on wide screens.
+- No new dependency, charting library, or CSS framework was added. All styling
+  is scoped to the existing `research-*` selectors.
+
+### 11.2 Responsive chart geometry (refines section 6, presentation only)
+
+- Each plot's SVG `viewBox` is generated at the measured container width via a
+  `ResizeObserver` hook (`useChartWidth.js`), so one SVG user unit stays close to
+  one CSS pixel and label text keeps its intended size. This intentionally
+  replaces scaling a fixed-size drawing, which shrinks labels on narrow screens.
+- A readable minimum width of 320px is kept. Below that the plot wrapper scrolls
+  horizontally rather than shrinking labels below the legibility floor. The
+  wrapper is keyboard-focusable (`role="group"`, `tabIndex=0`, `aria-label`).
+- No chart animation is used; reduced-motion and static-fallback behaviour for
+  this surface is unchanged.
+
+### 11.3 Non-color-only and unavailable-value rules (unchanged intent, restated)
+
+- Every bar carries its exact figure as text, and every axis carries tick labels.
+- An unavailable or suppressed statistic never renders as a zero-length bar; it
+  renders as a dashed track plus reason text. A legitimate zero in Chart A still
+  renders as a present-but-zero category (section 3).
+- Charts B and C keep each metric's `n` visible; Chart C keeps the explicit `+`
+  or `−` sign and native three-decimal display (section 6, condition G).
+
+### 11.4 Accessible table equivalents (refines section 6, presentation only)
+
+- Each chart is a labelled `<figure>` followed by a real HTML table with a
+  `<caption>`. Cells holding figures are marked as numeric; text/status columns
+  are marked as text so long status strings wrap instead of being forced onto one
+  line. The text-equivalent requirement of section 6 is unchanged and satisfied.
+
+### 11.5 Verification performed for this amendment (2026-10-19)
+
+- `apps/web`: `npm run lint` clean; `npm test` (apiTransport unit tests) pass;
+  `npm run build` succeeds. No backend file was touched, so no backend suite was
+  run for this amendment.
+- Browser rendering checked at 1440, 834, 390, and 320 CSS px against a
+  **synthetic** mock of the two research endpoints (no database, no real student
+  data), covering unfiltered, filtered, suppressed, and empty cohorts. All three
+  charts render at the measured width with `scaleX = scaleY = 1`; the 320px case
+  scrolls as designed.
+- The export interaction was confirmed to call `GET /api/research/export.csv`
+  with **no query string** while the view was filtered, reconfirming section 2.
+
+**Still outstanding (unchanged):** real assistive-technology pass, reduced-motion
+check, and the institutional privacy decision (section 5.3, section 9 item 1).
+This amendment is uncommitted and authorizes no further functionality.

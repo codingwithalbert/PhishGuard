@@ -36,8 +36,8 @@ function ExposureLevelFilter({
       ? "Loading Training Exposure levels..."
       : "Training Exposure levels are unavailable. Retry to load the filter."
     : isFiltered
-      ? `Showing ${cohortSize} participant(s) in the selected exposure cohort. Every count, chart and statistic on this page describes that cohort only.`
-      : "Showing the entire eligible cohort of active user accounts. Choose a level to scope the page to one exposure cohort.";
+      ? `Server-filtered cohort: ${cohortSize} participant(s).`
+      : "All eligible user accounts. Choose a level to scope the page.";
 
   return (
     <div className="research-filter">

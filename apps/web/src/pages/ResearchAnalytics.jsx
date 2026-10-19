@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
-import ExposureLevelFilter, {
-  ALL_EXPOSURE_LEVEL
-} from "../components/research/ExposureLevelFilter";
+import { ALL_EXPOSURE_LEVEL } from "../components/research/ExposureLevelFilter";
+import ResearchToolbar from "../components/research/ResearchToolbar";
 import {
   AssessmentScoreComparisonChart,
   PearsonCorrelationChart,
@@ -271,17 +270,17 @@ function ResearchErrorState({ error, onRetry }) {
 }
 
 /*
- * Suppression is reported here exactly as the charts report it. The previous
- * behaviour rendered every null as a dash, which made a deliberately withheld
- * statistic indistinguishable from one that was simply never available.
- * `n` is always shown, and the reason is stated once beneath the table rather
- * than repeated in every cell.
+ * Suppression is reported here exactly as the charts report it. A deliberately
+ * withheld statistic must remain distinguishable from one that was simply never
+ * available, and neither is ever rendered as zero. `n` is always shown, and the
+ * reason is stated once beneath the table rather than repeated in every cell.
  */
 function StatisticTable({
   title,
+  titleId,
   description,
+  scopeLabel,
   statistics,
-  labelledBy,
   context
 }) {
   const availability = describeMetricAvailability(statistics, context ?? {});
@@ -299,46 +298,60 @@ function StatisticTable({
   }
 
   return (
-    <section
-      className="research-panel"
-      aria-labelledby={labelledBy}
-    >
-      <h2 id={labelledBy}>{title}</h2>
+    <div className="research-stat-block">
+      <h3 id={titleId}>{title}</h3>
       <p className="research-panel-note">{description}</p>
 
-      <table className="research-stat-table">
-        <caption className="research-table-caption">
-          {title} values returned by the backend
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Statistic</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">Participants counted (n)</th>
-            <td>{statistics.n}</td>
-          </tr>
-          <tr>
-            <th scope="row">Mean</th>
-            <td>{renderValue(statistics.mean)}</td>
-          </tr>
-          <tr>
-            <th scope="row">Median</th>
-            <td>{renderValue(statistics.median)}</td>
-          </tr>
-          <tr>
-            <th scope="row">Minimum</th>
-            <td>{renderValue(statistics.min)}</td>
-          </tr>
-          <tr>
-            <th scope="row">Maximum</th>
-            <td>{renderValue(statistics.max)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div
+        className="research-table-scroll"
+        role="group"
+        tabIndex={0}
+        aria-label={`${title} statistics table; scroll horizontally if needed`}
+      >
+        <table className="research-stat-table">
+          <caption className="research-table-caption">
+            {title} descriptive statistics · {scopeLabel}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Statistic</th>
+              <th scope="col" className="research-cell-number">
+                Value
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Participants counted (n)</th>
+              <td className="research-cell-number">{statistics.n}</td>
+            </tr>
+            <tr>
+              <th scope="row">Mean</th>
+              <td className="research-cell-number">
+                {renderValue(statistics.mean)}
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Median</th>
+              <td className="research-cell-number">
+                {renderValue(statistics.median)}
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Minimum</th>
+              <td className="research-cell-number">
+                {renderValue(statistics.min)}
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Maximum</th>
+              <td className="research-cell-number">
+                {renderValue(statistics.max)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {availability.state === METRIC_AVAILABILITY.suppressed ? (
         <p className="research-boundary-note">
@@ -359,7 +372,7 @@ function StatisticTable({
           statistic. Missing data is never shown as zero.
         </p>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -508,7 +521,7 @@ function ResearchAnalyticsPage() {
 
   return (
     <main
-      className="awareness-page research-page"
+      className="research-page"
       id="main-content"
       tabIndex={-1}
       aria-busy={loading}
@@ -518,50 +531,35 @@ function ResearchAnalyticsPage() {
         description={
           <>
             <p>
-              Descriptive, aggregate research view of the three PhishGuard
-              research variables: Awareness Score, Phishing Identification
-              Score, and Training Exposure. Every value on this page is
-              calculated and returned by the backend; this page does not
-              recalculate or interpret any statistic.
+              Descriptive, server-computed statistics for the three research
+              variables across the eligible student cohort.
             </p>
-            <p className="research-intro-note">
-              This view is available to administrators only, and the API
-              enforces that restriction independently of this page. Results are
-              descriptive and exploratory: an observed association does not
-              establish causation, and missing participant measurements reduce
-              the available sample sizes.
+            <p className="research-context-line">
+              Admin only · De-identified aggregate view · Associations are not
+              causal ·{" "}
+              <a href="#research-methodology-heading">
+                Methods and limitations
+              </a>
             </p>
           </>
         }
       />
 
-      <section
-        className="research-panel research-filter-panel"
-        aria-labelledby="research-filter-heading"
-        aria-busy={loading}
-      >
-        <h2 id="research-filter-heading">Filter</h2>
-        <p className="research-panel-note">
-          Scope every count, chart and statistic below to one Training Exposure
-          level. The filter is applied on the server before any aggregate is
-          computed.
-        </p>
-
-        <ExposureLevelFilter
-          id={EXPOSURE_FILTER_ID}
-          levels={analytics?.methodology?.trainingExposureLevels ?? []}
-          selectedLevel={selectedLevel}
-          onChange={handleLevelChange}
-          available={analytics !== null}
-          loading={loading}
-          stale={loading && analytics !== null}
-          cohortSize={cohort?.totalEligibleParticipants ?? 0}
-        />
-
-        <p className="research-scope-line" aria-live="polite">
-          Current scope: <strong>{cohortScopeLabel}</strong>
-        </p>
-      </section>
+      <ResearchToolbar
+        id={EXPOSURE_FILTER_ID}
+        levels={analytics?.methodology?.trainingExposureLevels ?? []}
+        selectedLevel={selectedLevel}
+        onLevelChange={handleLevelChange}
+        available={analytics !== null}
+        loading={loading}
+        stale={loading && analytics !== null}
+        cohortSize={cohort?.totalEligibleParticipants ?? 0}
+        scopeLabel={cohortScopeLabel}
+        exporting={exporting}
+        exportError={exportError}
+        exportNeedsSignIn={isSessionError(exportError)}
+        onExport={handleExport}
+      />
 
       {loading ? (
         <ResearchLoadingState />
@@ -572,6 +570,48 @@ function ResearchAnalyticsPage() {
         />
       ) : analytics ? (
         <>
+          <section
+            className="research-panel research-cohort-panel"
+            aria-labelledby="research-cohort-heading"
+          >
+            <div className="research-section-head">
+              <div>
+                <h2 id="research-cohort-heading">Cohort context</h2>
+                <p className="research-panel-note">
+                  Eligible participants are active accounts with the user role.
+                  Staff, admin, and inactive accounts are excluded. Counts are
+                  headcounts: a training exposure count of 0 is a measured zero,
+                  not missing data.
+                </p>
+              </div>
+
+              <p className="research-cohort-scope">
+                Within selected exposure cohort:{" "}
+                <strong>{cohortScopeLabel}</strong>
+              </p>
+            </div>
+
+            <dl className="research-cohort-rail">
+              {COHORT_FIELDS.map(([field, label]) => (
+                <div key={field} className="research-metric">
+                  <dt>{label}</dt>
+                  <dd>{cohort[field]}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {isFiltered && (
+              <p className="research-boundary-note">
+                Within a selected exposure cohort these two counts describe the
+                selected level rather than the whole cohort, so they are
+                determined by the filter: participants with Training Exposure
+                above 0% is 0 at the 0% level and the cohort size at every other
+                level, and participants with 100% Training Exposure is 0 at
+                every level except 100%, where it is the cohort size.
+              </p>
+            )}
+          </section>
+
           {hasNoParticipants && (
             <section className="research-panel research-empty-state">
               <h2>
@@ -607,61 +647,47 @@ function ResearchAnalyticsPage() {
           )}
 
           <section
-            className="research-panel"
-            aria-labelledby="research-cohort-heading"
+            className="research-panel research-statistics-panel"
+            aria-labelledby="research-statistics-heading"
           >
-            <h2 id="research-cohort-heading">Cohort summary</h2>
-            <p className="research-panel-note">
-              Eligible participants are active accounts with the user role.
-              Staff, admin, and inactive accounts are excluded.
-            </p>
-            <p className="research-scope-line">
-              Within selected exposure cohort:{" "}
-              <strong>{cohortScopeLabel}</strong>
-            </p>
+            <div className="research-section-head">
+              <div>
+                <h2 id="research-statistics-heading">
+                  Assessment statistics
+                </h2>
+                <p className="research-panel-note">
+                  Each assessment uses the latest completed attempt for each
+                  participant. n is the number of valid observations for that
+                  assessment, which can be smaller than the cohort.
+                </p>
+              </div>
 
-            <dl className="research-cohort-grid">
-              {COHORT_FIELDS.map(([field, label]) => (
-                <div key={field}>
-                  <dt>{label}</dt>
-                  <dd>{cohort[field]}</dd>
-                </div>
-              ))}
-            </dl>
-
-            {isFiltered && (
-              <p className="research-boundary-note">
-                Within a selected exposure cohort these two counts describe the
-                selected level rather than the whole cohort, so they are
-                determined by the filter: participants with Training Exposure
-                above 0% is 0 at the 0% level and the cohort size at every other
-                level, and participants with 100% Training Exposure is 0 at
-                every level except 100%, where it is the cohort size.
+              <p className="research-cohort-scope">
+                Statistics are returned by the backend; this page does not
+                recalculate them.
               </p>
-            )}
-          </section>
+            </div>
 
-          <div className="research-statistics-grid">
-            <div className="research-table-scroll">
+            <div className="research-statistics-grid">
               <StatisticTable
-                labelledBy="research-awareness-heading"
+                titleId="research-awareness-heading"
                 title="Awareness Score"
+                scopeLabel={cohortScopeLabel}
                 description={`Descriptive statistics for the latest completed Awareness Assessment of each participant in ${cohortScopeLabel}.`}
                 statistics={analytics.awareness}
                 context={chartContext}
               />
-            </div>
 
-            <div className="research-table-scroll">
               <StatisticTable
-                labelledBy="research-phishing-heading"
+                titleId="research-phishing-heading"
                 title="Phishing Identification Score"
+                scopeLabel={cohortScopeLabel}
                 description={`Descriptive statistics for the latest completed Phishing Identification Assessment of each participant in ${cohortScopeLabel}.`}
                 statistics={analytics.phishingIdentification}
                 context={chartContext}
               />
             </div>
-          </div>
+          </section>
 
           <TrainingExposureDistributionChart
             levels={analytics.methodology.trainingExposureLevels}
@@ -682,7 +708,7 @@ function ResearchAnalyticsPage() {
           />
 
           <section
-            className="research-panel"
+            className="research-panel research-reading-panel"
             aria-labelledby="research-methodology-heading"
           >
             <h2 id="research-methodology-heading">
@@ -726,10 +752,16 @@ function ResearchAnalyticsPage() {
           </section>
 
           <section
-            className="research-panel research-privacy-panel"
+            className="research-panel research-reading-panel research-privacy-panel"
             aria-labelledby="research-privacy-heading"
           >
-            <h2 id="research-privacy-heading">Privacy note</h2>
+            <h2 id="research-privacy-heading">Privacy and data handling</h2>
+            <p className="research-panel-note">
+              The CSV export is available from the cohort view toolbar above. It
+              always covers the whole eligible cohort and is not scoped by the
+              selected exposure level.
+            </p>
+
             <ul className="research-privacy-list">
               <li>
                 This page contains aggregate research values only. It shows no
@@ -758,52 +790,6 @@ function ResearchAnalyticsPage() {
                 figures that remain.
               </li>
             </ul>
-          </section>
-
-          <section
-            className="research-panel research-export-panel"
-            aria-labelledby="research-export-heading"
-          >
-            <h2 id="research-export-heading">Dataset export</h2>
-            <p className="research-panel-note">
-              Download the pseudonymous participant-level research dataset as
-              CSV. The file is generated by the backend and always contains the
-              whole eligible cohort; the filter above does not change it. This
-              page never builds participant rows itself.
-            </p>
-
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exporting}
-            >
-              {exporting ? "Preparing export..." : "Export CSV"}
-            </button>
-
-            {exporting && (
-              <p
-                className="awareness-status"
-                role="status"
-                aria-live="polite"
-              >
-                Downloading the research dataset...
-              </p>
-            )}
-
-            {exportError && (
-              <div
-                className="research-export-error"
-                role="alert"
-              >
-                <p>{exportError.message}</p>
-
-                {isSessionError(exportError) ? (
-                  <p>
-                    <Link to="/login">Sign in again</Link>
-                  </p>
-                ) : null}
-              </div>
-            )}
           </section>
         </>
       ) : null}
