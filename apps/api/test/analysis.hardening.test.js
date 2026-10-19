@@ -217,7 +217,9 @@ test("the analysis limiter is a distinct instance from every other limiter", () 
     require("../src/middleware/rateLimit.middleware").loginLimiter,
     require("../src/middleware/rateLimit.middleware").registerLimiter,
     require("../src/middleware/rateLimit.middleware").forgotPasswordLimiter,
+    require("../src/middleware/rateLimit.middleware").resetPasswordLimiter,
     require("../src/middleware/rateLimit.middleware").credentialChangeLimiter,
+    require("../src/middleware/rateLimit.middleware").logoutLimiter,
     require("../src/middleware/rateLimit.middleware").reviewerMessageLimiter,
     require("../src/middleware/rateLimit.middleware").studentMessageLimiter,
     require("../src/middleware/rateLimit.middleware").reportCreateLimiter

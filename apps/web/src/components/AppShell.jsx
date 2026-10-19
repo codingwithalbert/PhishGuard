@@ -12,6 +12,7 @@ import {
   clearStoredSession,
   getStoredUserRole
 } from "../services/session";
+import { logoutUser } from "../services/api";
 
 /*
  * Authenticated application shell (Major UI/UX V1).
@@ -114,10 +115,31 @@ function AppShell() {
     menuButtonRef.current?.focus();
   }, []);
 
+  /*
+   * Server-side logout (Phase 0 security hardening).
+   *
+   * Ordering is correctness-critical. `logoutUser()` captures the bearer token
+   * synchronously at invocation (apiTransport calls getAuthToken() before its
+   * first await), so it must be invoked BEFORE `clearStoredSession()`. The
+   * local session is then cleared and navigation happens immediately, so the
+   * user is signed out client-side no matter what the server does.
+   *
+   * The revocation request is best-effort: its promise is never awaited and a
+   * network failure, timeout, 429, or 5xx is swallowed. No message or state
+   * ever claims server-side revocation for an unconfirmed request; server-side
+   * revocation is a server truth, not a UI promise. A late 401/403 from this
+   * detached request is safely ignored by the token-mismatch guard in
+   * session.js (the stored token is already gone), so no redirect storm or
+   * error surface is created.
+   */
   function handleLogout() {
+    const revocation = logoutUser();
+
     clearStoredSession();
 
     navigate("/login");
+
+    revocation.catch(() => {});
   }
 
   return (

@@ -160,6 +160,19 @@ export async function changePassword(currentPassword, newPassword) {
   }
 }
 
+// Server-side logout. Best-effort token revocation: the shared requester
+// captures the bearer token synchronously at this call, so the shell can clear
+// local session state immediately afterwards without losing the credential.
+// Every transport or HTTP failure here is swallowed by the caller — logout is
+// complete client-side regardless, and no user-visible message ever claims
+// server-side revocation for a failed request.
+export function logoutUser() {
+  return request("/api/auth/logout", {
+    method: "POST",
+    requiresAuth: true
+  });
+}
+
 // Research Analytics V1: aggregate research analytics. Admin only; the backend
 // enforces authorization. This endpoint returns aggregate values only and never
 // returns participant-level records.

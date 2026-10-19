@@ -108,6 +108,8 @@ app.use(
     service,
     forgotPasswordWorkflow,
     forgotPasswordRateLimiter: passThroughLimiter,
+
+    resetPasswordRateLimiter: passThroughLimiter,
     recordAuditEvent: async () => null
   })
 );
@@ -890,8 +892,7 @@ test("existing auth routes are unchanged by the password-reset wiring", () => {
     ["/register", ["post"]],
     ["/login", ["post"]],
     ["/me", ["get"]],
-    ["/staff-test", ["get"]],
-    ["/admin-test", ["get"]]
+    ["/logout", ["post"]]
   ]) {
     assert.deepEqual(
       registeredMethods.get(path),
@@ -899,12 +900,18 @@ test("existing auth routes are unchanged by the password-reset wiring", () => {
       `${path} must remain registered with its original method`
     );
   }
+
+  // Phase 0: the demonstration RBAC routes are no longer registered by the
+  // production router; their coverage moved to the offline suite via
+  // `createAuthRouter({ includeDemoRoutes: true })`.
+  assert.equal(registeredMethods.has("/staff-test"), false);
+  assert.equal(registeredMethods.has("/admin-test"), false);
 });
-test("existing register, login, me, and RBAC behavior is unchanged", async (t) => {
-  // `authenticate` now resolves the current User record, so the token's id
-  // must map to an active account. It is resolved as role "user" from the
-  // database, which keeps the RBAC denial assertion below meaningful: the
-  // authorization decision now comes from server state, not the token claim.
+test("existing register, login, and me behavior is unchanged", async (t) => {
+  // `authenticate` resolves the current User record, so the token's id must
+  // map to an active account: the authorization decision comes from server
+  // state, not the token claim. The mock below is what keeps the wired
+  // production chain reachable without MongoDB.
   t.mock.method(User, "findOne", () => {
     const query = {
       select() {
@@ -922,6 +929,18 @@ test("existing register, login, me, and RBAC behavior is unchanged", async (t) =
 
     return query;
   });
+
+  // `/api/auth/me` reads the account again through `User.findById`, so that
+  // lookup is mocked as well to keep the suite entirely offline.
+  t.mock.method(User, "findById", (id) =>
+    Promise.resolve({
+      _id: id,
+      name: "Stage Three User",
+      email: "stage3.user@example.invalid",
+      role: "user",
+      isActive: true
+    })
+  );
 
   const userToken = jwt.sign(
     {
@@ -961,19 +980,19 @@ test("existing register, login, me, and RBAC behavior is unchanged", async (t) =
     error: "Password must be between 8 and 128 characters"
   });
 
-  const deniedAdminRoute = await get("/api/auth/admin-test", {
+  // The authenticated /me surface still resolves through the wired router;
+  // the RBAC allow/deny matrix moved to the offline suite
+  // (auth.rbac.routes.test.js) because the demonstration routes are no
+  // longer registered in production.
+  const meRoute = await get("/api/auth/me", {
     Authorization: `Bearer ${userToken}`
   });
 
-  assert.equal(deniedAdminRoute.status, 403);
-  assert.deepEqual((await readJson(deniedAdminRoute)).data, {
-    success: false,
-    error: "You do not have permission to access this resource"
-  });
-
-  const missingTokenRoute = await get("/api/auth/staff-test");
-
-  assert.equal(missingTokenRoute.status, 401);
+  assert.equal(meRoute.status, 200);
+  assert.equal(
+    (await readJson(meRoute)).data.success,
+    true
+  );
 });
 
 function createResetTokenResult() {

@@ -31,7 +31,8 @@ const ACCOUNT_ERROR_CODES = Object.freeze({
   INCORRECT_CURRENT_PASSWORD: "ACCOUNT_INCORRECT_CURRENT_PASSWORD",
   INVALID_NEW_PASSWORD: "ACCOUNT_INVALID_NEW_PASSWORD",
   UNCHANGED_PASSWORD: "ACCOUNT_UNCHANGED_PASSWORD",
-  INVALID_STORED_PASSWORD: "ACCOUNT_INVALID_STORED_PASSWORD"
+  INVALID_STORED_PASSWORD: "ACCOUNT_INVALID_STORED_PASSWORD",
+  REVOCATION_UNCONFIRMED: "ACCOUNT_REVOCATION_UNCONFIRMED"
 });
 
 class AccountServiceError extends Error {
@@ -101,6 +102,17 @@ function invalidStoredPassword() {
   return createServiceError(
     ACCOUNT_ERROR_CODES.INVALID_STORED_PASSWORD,
     "Account password state is unavailable",
+    500
+  );
+}
+
+// The tokenVersion write could not be confirmed by the database layer. No
+// revocation has been demonstrated, so the outcome must never be reported as a
+// successful server-side revocation anywhere downstream.
+function revocationUnconfirmed() {
+  return createServiceError(
+    ACCOUNT_ERROR_CODES.REVOCATION_UNCONFIRMED,
+    "Logout could not be completed",
     500
   );
 }
@@ -305,12 +317,61 @@ async function changeOwnPassword({
   };
 }
 
+// Server-side logout (Phase 0 security hardening).
+//
+// Revokes every outstanding bearer token for the authenticated account by
+// incrementing tokenVersion. `authenticate` re-reads the current tokenVersion
+// on every request and rejects any token whose version no longer matches, so
+// one successful bump invalidates the token on every device at once.
+//
+// The only permitted input is the authenticated user id; no client field can
+// target a different account, and no other field is ever written.
+//
+// The three outcomes are deliberately distinguishable:
+//
+//   - matchedCount === 1  → the account exists and the bump was applied
+//                           ({ revoked: true }).
+//   - matchedCount === 0  → resolved write, no matching account: the record is
+//                           missing or was already invalid between
+//                           authentication and this write. Such a session is
+//                           ALREADY unauthenticatable, so the caller's logout
+//                           is complete, but no server-side revocation
+//                           occurred and none is reported ({ revoked: false }).
+//                           This is an expected terminal condition, not an
+//                           error.
+//   - anything else       → the write result was not confirmed (a rejected
+//                           promise, or a result without a numeric
+//                           matchedCount). A sanitized 500-class error is
+//                           thrown so no revocation or logout success is ever
+//                           reported for an unconfirmed write.
+async function revokeOwnTokens({ userId, userModel = User } = {}) {
+  requireAuthenticatedUserId(userId);
+
+  const result = await userModel.updateOne(
+    { _id: userId },
+    {
+      $inc: {
+        tokenVersion: 1
+      }
+    }
+  );
+
+  if (!result || typeof result.matchedCount !== "number") {
+    throw revocationUnconfirmed();
+  }
+
+  return {
+    revoked: result.matchedCount === 1
+  };
+}
+
 module.exports = {
   ACCOUNT_ERROR_CODES,
   AccountServiceError,
   PROFILE_NAME_MAX_LENGTH,
   PROFILE_NAME_MIN_LENGTH,
   changeOwnPassword,
+  revokeOwnTokens,
   toSafeProfile,
   updateOwnProfileName
 };
