@@ -26,6 +26,26 @@ const forgotPasswordLimiter = rateLimit({
   }
 });
 
+// Reset-token submission limiter. It sits on POST /reset-password ahead of
+// validation so a blocked caller never reaches the token lookup or the bcrypt
+// re-hash, and it is deliberately a separate instance so reset submissions can
+// never consume or reset the forgot-password email budget (mirrors the
+// established per-endpoint instance rule used by every other limiter here).
+// Like all pre-authentication limiters it is keyed on the client IP observed by
+// the single trusted proxy hop, and it is deliberately more generous than the
+// forgot-password limiter (10 per 15 minutes) because a legitimate submission
+// can be retried after a mistyped or expired link.
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: "Too many password reset attempts. Please try again later."
+  }
+});
+
 // Public registration limiter. It is deliberately separate from the login
 // limiter so registration throttling can never consume or reset the login
 // counter, and it uses a longer, higher window than login because legitimate
@@ -143,6 +163,20 @@ const reportCreateLimiter = rateLimit({
   message: AUTHENTICATED_LIMIT_MESSAGE
 });
 
+// Logout limiter. Each accepted call performs one tokenVersion increment, so a
+// compromised or malfunctioning client session cannot churn unbounded database
+// writes under a valid bearer token. Ten per fifteen minutes is far above
+// realistic logout activity. It is its own instance so logout traffic never
+// consumes, resets, or shares a quota with credential changes.
+const logoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: authenticatedUserKey,
+  message: AUTHENTICATED_LIMIT_MESSAGE
+});
+
 // URL analysis limiter. Every accepted analysis performs a deterministic,
 // purely local lexical evaluation and then one Analysis document write. There
 // is no outbound network call and no email, so this primitive is far cheaper
@@ -188,9 +222,11 @@ module.exports = {
   credentialChangeLimiter,
   forgotPasswordLimiter,
   loginLimiter,
+  logoutLimiter,
   registerLimiter,
   reportCreateLimiter,
   requireAuthenticatedIdentity,
+  resetPasswordLimiter,
   reviewerMessageLimiter,
   studentMessageLimiter
 };

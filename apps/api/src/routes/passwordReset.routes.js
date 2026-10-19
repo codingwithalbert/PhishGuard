@@ -7,7 +7,8 @@ const {
   forgotPasswordWorkflow: productionForgotPasswordWorkflow
 } = require("../services/passwordReset.workflow");
 const {
-  forgotPasswordLimiter
+  forgotPasswordLimiter,
+  resetPasswordLimiter
 } = require("../middleware/rateLimit.middleware");
 const {
   validateForgotPasswordRequest,
@@ -21,6 +22,7 @@ function createPasswordResetRouter({
   service,
   forgotPasswordWorkflow = productionForgotPasswordWorkflow,
   forgotPasswordRateLimiter = forgotPasswordLimiter,
+  resetPasswordRateLimiter = resetPasswordLimiter,
   recordAuditEvent,
   auditRecordTimeoutMs
 } = {}) {
@@ -32,8 +34,12 @@ function createPasswordResetRouter({
     auditRecordTimeoutMs
   });
 
+  // The reset-submission limiter runs before validation so a blocked caller
+  // never reaches the token lookup or the bcrypt re-hash. Only fixed text is
+  // ever published, so no limiter state or identity information is exposed.
   router.post(
     "/reset-password",
+    resetPasswordRateLimiter,
     validateResetPasswordRequest,
     controller.resetPassword
   );

@@ -17,6 +17,7 @@ const {
 } = require("../src/middleware/auth.middleware");
 const {
   credentialChangeLimiter,
+  logoutLimiter,
   requireAuthenticatedIdentity
 } = require("../src/middleware/rateLimit.middleware");
 const {
@@ -335,14 +336,19 @@ test("existing auth routes are unchanged", () => {
     "post /register",
     "post /login",
     "get /me",
-    "get /staff-test",
-    "get /admin-test"
+    "post /logout"
   ]) {
     assert.ok(
       registered.includes(existing),
       `${existing} must remain registered`
     );
   }
+
+  // Phase 0: the demonstration RBAC routes are no longer part of the
+  // production registration surface. Their allow/deny coverage moved to the
+  // offline suite through `createAuthRouter({ includeDemoRoutes: true })`.
+  assert.equal(registered.includes("get /staff-test"), false);
+  assert.equal(registered.includes("get /admin-test"), false);
 
   const meRoute = authRoutes.stack
     .filter((layer) => layer.route)
@@ -351,6 +357,23 @@ test("existing auth routes are unchanged", () => {
   assert.deepEqual(
     meRoute.route.stack.map((entry) => entry.handle),
     [authenticate, authController.getMe]
+  );
+
+  // Server-side logout (Phase 0): authentication first, then the identity
+  // guard, then the logout limiter, then the controller.
+  const logoutRoute = authRoutes.stack
+    .filter((layer) => layer.route)
+    .find((layer) => layer.route.path === "/logout");
+
+  assert.ok(logoutRoute, "POST /logout must be registered");
+  assert.deepEqual(
+    logoutRoute.route.stack.map((entry) => entry.handle),
+    [
+      authenticate,
+      requireAuthenticatedIdentity,
+      logoutLimiter,
+      authController.logout
+    ]
   );
 });
 

@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const accountService = require("../services/account.service");
 const { auditLog } = require("../middleware/audit.middleware");
 const {
   recordAuditEvent: defaultRecordAuditEvent
@@ -226,8 +227,86 @@ function createLoginController({
   return { login };
 }
 
+// Server-side logout (Phase 0 security hardening).
+//
+// Factory-built like login and registration so the service call and the
+// persistent audit write can both be faked offline. The account-wide
+// revocation itself lives in account.service.revokeOwnTokens; this boundary
+// maps its two resolved outcomes onto two distinct static messages:
+//
+//   - { revoked: true }  → "Logged out successfully." The tokenVersion bump
+//                          was confirmed by the database, so claiming the
+//                          server-side revocation is truthful.
+//   - { revoked: false } → "You have been signed out." The write resolved but
+//                          matched no account, so the session was already
+//                          unauthenticatable and no server-side revocation
+//                          occurred. The message deliberately does NOT claim
+//                          one.
+//
+// A database failure or an unconfirmed write forwards to the global error
+// handler as a generic 500; the caller is told nothing about revocation.
+// Every handled outcome records exactly one console event and one bounded
+// persistent event, carrying only the authenticated actor, in the same
+// identity policy as login.
+const AUDIT_ACTION_LOGOUT = "LOGOUT";
+
+const LOGGED_OUT_MESSAGE = "Logged out successfully.";
+const SIGNED_OUT_MESSAGE = "You have been signed out.";
+
+function applyNoStore(res) {
+  res.set("Cache-Control", "no-store");
+}
+
+function createLogoutController({
+  accountService: injectedAccountService = accountService,
+  recordAuditEvent = defaultRecordAuditEvent,
+  auditRecordTimeoutMs = AUDIT_RECORD_TIMEOUT_MS
+} = {}) {
+  const persistLogoutEvent = createBoundedAuditWriter({
+    recordAuditEvent,
+    auditRecordTimeoutMs
+  });
+
+  async function logout(req, res, next) {
+    applyNoStore(res);
+
+    try {
+      const { revoked } = await injectedAccountService.revokeOwnTokens({
+        userId: req.user.userId
+      });
+
+      auditLog(AUDIT_ACTION_LOGOUT, req, {
+        userId: req.user.userId,
+        role: req.user.role
+      });
+
+      await persistLogoutEvent({
+        category: AUDIT_CATEGORY_AUTHENTICATION,
+        action: AUDIT_ACTION_LOGOUT,
+        outcome: AUDIT_OUTCOME_SUCCESS,
+        actor: req.user.userId,
+        actorRole: req.user.role
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: revoked ? LOGGED_OUT_MESSAGE : SIGNED_OUT_MESSAGE
+      });
+    } catch (error) {
+      // An unconfirmed or failed revocation is never reported as a successful
+      // logout by this boundary: the generic sanitized 500 tells the caller
+      // the server could not complete the operation. The client-side session
+      // cleanup remains the caller's responsibility and happens regardless.
+      return next(error);
+    }
+  }
+
+  return { logout };
+}
+
 const defaultLoginController = createLoginController();
 const defaultRegistrationController = createRegistrationController();
+const defaultLogoutController = createLogoutController();
 
 async function getMe(req, res, next) {
   try {
@@ -257,8 +336,12 @@ async function getMe(req, res, next) {
 module.exports = {
   register: defaultRegistrationController.register,
   login: defaultLoginController.login,
+  logout: defaultLogoutController.logout,
   getMe,
   createLoginController,
   createRegistrationController,
+  createLogoutController,
+  LOGGED_OUT_MESSAGE,
+  SIGNED_OUT_MESSAGE,
   AUDIT_RECORD_TIMEOUT_MS
 };

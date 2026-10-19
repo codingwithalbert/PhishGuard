@@ -25,7 +25,8 @@ const {
   authenticate
 } = require("../src/middleware/auth.middleware");
 const {
-  forgotPasswordLimiter
+  forgotPasswordLimiter,
+  resetPasswordLimiter
 } = require("../src/middleware/rateLimit.middleware");
 const {
   validateForgotPasswordRequest,
@@ -1084,13 +1085,19 @@ test("production routing registers both endpoints in the required order", () => 
     "forgotPassword"
   );
 
-  assert.equal(resetRoute.handlers.length, 2);
+  // Phase 0: the reset-submission limiter runs ahead of validation, so a
+  // blocked caller performs no token lookup and no bcrypt re-hash.
+  assert.equal(resetRoute.handlers.length, 3);
   assert.equal(
     resetRoute.handlers[0],
+    resetPasswordLimiter
+  );
+  assert.equal(
+    resetRoute.handlers[1],
     validateResetPasswordRequest
   );
   assert.equal(
-    resetRoute.handlers[1].name,
+    resetRoute.handlers[2].name,
     "resetPassword"
   );
 
@@ -1120,8 +1127,7 @@ test("existing auth routes remain unchanged after Stage 4 wiring", () => {
     ["/register", ["post"]],
     ["/login", ["post"]],
     ["/me", ["get"]],
-    ["/staff-test", ["get"]],
-    ["/admin-test", ["get"]]
+    ["/logout", ["post"]]
   ]) {
     assert.deepEqual(
       registeredMethods.get(path),
